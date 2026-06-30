@@ -1,18 +1,25 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import DynamicForm from '../components/DynamicForm.astro';
-import { loadAppConfig } from '../lib/app-config';
+import { loadAppConfig, getBrandName, getLogoUrl } from '../lib/app-config';
+import { hasUploadedLogo } from '../lib/logo';
 
 const appConfig = await loadAppConfig();
 if (!appConfig.settings.notifyEmail && process.env.NOTIFY_EMAIL) {
   appConfig.settings.notifyEmail = process.env.NOTIFY_EMAIL;
 }
+const brandName = getBrandName(appConfig);
+const logoUrl = getLogoUrl(appConfig);
+const logoUploaded = hasUploadedLogo(appConfig);
 ---
 
 <Layout
   title={appConfig.settings.formTitle}
-  eyebrow={appConfig.settings.formEyebrow}
+  eyebrow={appConfig.settings.formEyebrow || brandName}
   subtitle={appConfig.settings.formSubtitle}
+  companyName={brandName}
+  logoUrl={logoUrl}
+  logoUploaded={logoUploaded}
 >
   <DynamicForm appConfig={appConfig} />
 </Layout>

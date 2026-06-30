@@ -5,7 +5,11 @@ import type { AppConfig, FormAnswers } from './types';
 import type { SavedFile } from './storage';
 import type { SupplierAssessment } from './scoring';
 import { getCompanyName, getContactEmail, sectionToRows, str } from './form-utils';
-import { getAssessorName } from './app-config';
+import { getAssessorName, getBrandName } from './app-config';
+import { loadLogoBuffer } from './logo';
+
+const PDF_LOGO_WIDTH = 100;
+const PDF_LOGO_HEIGHT = 54;
 
 const PAGE_WIDTH = 595.28;
 const MARGIN = 40;
@@ -242,24 +246,65 @@ function drawSectionHeading(doc: InstanceType<typeof PDFDocument>, text: string,
   doc.y += 16;
 }
 
+function drawPdfLogo(doc: InstanceType<typeof PDFDocument>, logoBuffer: Buffer | null, y: number): number {
+  if (!logoBuffer) return MARGIN;
+
+  try {
+    doc.image(logoBuffer, MARGIN, y, { fit: [PDF_LOGO_WIDTH, PDF_LOGO_HEIGHT] });
+    return MARGIN + PDF_LOGO_WIDTH + 16;
+  } catch {
+    return MARGIN;
+  }
+}
+
 function drawAssessmentHeader(
   doc: InstanceType<typeof PDFDocument>,
-  companyName: string,
+  brandName: string,
+  supplierName: string,
   submissionId: string,
+  logoBuffer: Buffer | null = null,
 ): void {
   doc.rect(0, 0, PAGE_WIDTH, 82).fill(COLORS.navy);
+  const textX = drawPdfLogo(doc, logoBuffer, 12);
   doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(17).text(
-    "Your Company — Supplier Assessment",
-    MARGIN,
+    `${brandName} — Supplier Assessment`,
+    textX,
     22,
+    { width: PAGE_WIDTH - textX - MARGIN },
   );
   doc.font('Helvetica').fontSize(9).fillColor(COLORS.headerSub).text(
-    `${companyName} · Submission ID: ${submissionId}`,
-    MARGIN,
+    `${supplierName} · Submission ID: ${submissionId}`,
+    textX,
     48,
+    { width: PAGE_WIDTH - textX - MARGIN },
   );
   doc.fillColor(COLORS.text);
   doc.y = 96;
+}
+
+function drawQuestionnaireHeader(
+  doc: InstanceType<typeof PDFDocument>,
+  brandName: string,
+  submissionId: string,
+  logoBuffer: Buffer | null = null,
+): void {
+  doc.rect(0, 0, PAGE_WIDTH, 90).fill(COLORS.navy);
+  const textX = drawPdfLogo(doc, logoBuffer, 16);
+  doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(20).text(brandName, textX, 28, {
+    width: PAGE_WIDTH - textX - MARGIN,
+  });
+  doc.fontSize(14).font('Helvetica').text('Supplier Questionnaire Responses', textX, 52, {
+    width: PAGE_WIDTH - textX - MARGIN,
+  });
+  doc.fontSize(9).fillColor(COLORS.headerSub).text(`Submission ID: ${submissionId}`, textX, 72, {
+    width: PAGE_WIDTH - textX - MARGIN,
+  });
+  doc.fillColor(COLORS.text);
+  doc.y = 110;
+}
+
+function pdfFooterText(brandName: string): string {
+  return `${brandName} Supplier Approval System`;
 }
 
 function drawStyledBullets(doc: InstanceType<typeof PDFDocument>, items: string[], boldPrefix = false): void {
@@ -364,6 +409,9 @@ export async function generateQuestionnairePdf(
   appConfig: AppConfig,
 ): Promise<Buffer> {
   const companyName = getCompanyName(data);
+  const brandName = getBrandName(appConfig);
+  const logoData = await loadLogoBuffer(appConfig);
+  const logoBuffer = logoData?.buffer ?? null;
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: MARGIN, size: 'A4' });
@@ -373,13 +421,7 @@ export async function generateQuestionnairePdf(
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    doc.rect(0, 0, PAGE_WIDTH, 90).fill('#1e3a5f');
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(20).text("Your Company", MARGIN, 28);
-    doc.fontSize(14).font('Helvetica').text('Supplier Questionnaire Responses', MARGIN, 52);
-    doc.fontSize(9).fillColor('#dbeafe').text(`Submission ID: ${submissionId}`, MARGIN, 72);
-
-    doc.fillColor('#111827');
-    doc.y = 110;
+    drawQuestionnaireHeader(doc, brandName, submissionId, logoBuffer);
 
     drawKeyValue(doc, 'Supplier', companyName);
     drawKeyValue(doc, 'Contact', `${str(data, 'contactName') || '—'} (${getContactEmail(data) || '—'})`);
@@ -392,7 +434,7 @@ export async function generateQuestionnairePdf(
     doc.moveDown(1);
     ensureSpace(doc, 30);
     doc.font('Helvetica').fontSize(8).fillColor('#6b7280').text(
-      `Generated ${new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })} · Your Company Supplier Approval System`,
+      `Generated ${new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })} · ${pdfFooterText(brandName)}`,
       MARGIN,
       doc.y,
       { width: CONTENT_WIDTH, align: 'center' },
@@ -411,6 +453,9 @@ export async function generateAssessmentPdf(
 ): Promise<Buffer> {
   const assessor = getAssessorName(appConfig);
   const companyName = getCompanyName(data);
+  const brandName = getBrandName(appConfig);
+  const logoData = await loadLogoBuffer(appConfig);
+  const logoBuffer = logoData?.buffer ?? null;
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: MARGIN, size: 'A4' });
@@ -420,7 +465,7 @@ export async function generateAssessmentPdf(
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    drawAssessmentHeader(doc, companyName, submissionId);
+    drawAssessmentHeader(doc, brandName, companyName, submissionId, logoBuffer);
 
     const cardY = doc.y;
     const cardHeight = estimateCardHeight(assessment.categories.length);
@@ -443,7 +488,7 @@ export async function generateAssessmentPdf(
     doc.moveDown(1);
     ensureSpace(doc, 30);
     doc.font('Helvetica').fontSize(8).fillColor(COLORS.gray).text(
-      `Report generated ${new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })} · Your Company Supplier Approval System`,
+      `Report generated ${new Date().toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })} · ${pdfFooterText(brandName)}`,
       MARGIN,
       doc.y,
       { width: CONTENT_WIDTH, align: 'center' },

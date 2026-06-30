@@ -7,7 +7,12 @@ import {
   getContactEmail,
   sectionToRows,
 } from './form-utils';
-import { getAssessorName, getNotifyEmail } from './app-config';
+import { getAssessorName, getBrandName, getLogoUrl, getNotifyEmail } from './app-config';
+import {
+  buildEmailLogoHtml,
+  getEmailLogoCid,
+  loadLogoBuffer,
+} from './logo';
 import { config } from './config';
 import {
   buildReviewReminderFilename,
@@ -57,6 +62,7 @@ function getScoreColor(percentage: number): string {
 function buildAssessmentReport(assessment: SupplierAssessment, data: FormAnswers, appConfig: AppConfig): string {
   const color = getScoreColor(assessment.percentage);
   const assessor = getAssessorName(appConfig);
+  const brandName = getBrandName(appConfig);
 
   const matrixRows = assessment.categories
     .map(
@@ -158,7 +164,10 @@ export function buildEmailHtml(
   appConfig: AppConfig,
   files: SavedFile[],
   assessment: SupplierAssessment,
+  logoHtml = '',
 ): string {
+  const brandName = getBrandName(appConfig);
+
   return `
 <!DOCTYPE html>
 <html>
@@ -169,7 +178,8 @@ export function buildEmailHtml(
       <table width="720" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
         <tr>
           <td style="background:#1e3a5f;padding:28px 32px;">
-            <h1 style="margin:0;color:#fff;font-size:22px;">Your Company — Supplier Assessment</h1>
+            ${logoHtml}
+            <h1 style="margin:0;color:#fff;font-size:22px;">${escapeHtml(brandName)} — Supplier Assessment</h1>
             <p style="margin:8px 0 0;color:#cbd5e1;font-size:14px;">${escapeHtml(getCompanyName(data))} · Submission ID: ${escapeHtml(submissionId)}</p>
           </td>
         </tr>
@@ -213,14 +223,31 @@ export async function sendSubmissionEmail(
     auth: { user: config.smtp.user, pass: config.smtp.pass },
   });
 
-  const html = buildEmailHtml(submissionId, data, appConfig, files, assessment);
-  const from = config.smtp.from || `"Supplier Form" <${config.smtp.user}>`;
-  const ratingShort = assessment.percentage >= 60 ? assessment.approvalStatus.split('—')[0].trim() : assessment.rating;
+  const logoData = await loadLogoBuffer(appConfig);
+  const brandName = getBrandName(appConfig);
+  let logoHtml = '';
 
   const emailAttachments: Array<
     | { filename: string; path: string }
-    | { filename: string; content: Buffer; contentType: string }
+    | { filename: string; content: Buffer; contentType: string; cid?: string }
   > = [];
+
+  if (logoData?.source === 'upload') {
+    const cid = getEmailLogoCid();
+    logoHtml = buildEmailLogoHtml(`cid:${cid}`, brandName, escapeHtml);
+    emailAttachments.push({
+      filename: logoData.mimeType.includes('png') ? 'logo.png' : 'logo.jpg',
+      content: logoData.buffer,
+      contentType: logoData.mimeType,
+      cid,
+    });
+  } else if (logoData?.source === 'url') {
+    logoHtml = buildEmailLogoHtml(getLogoUrl(appConfig), brandName, escapeHtml);
+  }
+
+  const html = buildEmailHtml(submissionId, data, appConfig, files, assessment, logoHtml);
+  const from = config.smtp.from || `"Supplier Form" <${config.smtp.user}>`;
+  const ratingShort = assessment.percentage >= 60 ? assessment.approvalStatus.split('—')[0].trim() : assessment.rating;
 
   if (pdfReportPath) {
     emailAttachments.push({
@@ -229,7 +256,7 @@ export async function sendSubmissionEmail(
     });
   }
 
-  const reviewIcs = generateReviewReminderIcs(submissionId, data, assessment);
+  const reviewIcs = generateReviewReminderIcs(submissionId, data, assessment, getBrandName(appConfig));
   if (reviewIcs) {
     emailAttachments.push({
       filename: buildReviewReminderFilename(data),

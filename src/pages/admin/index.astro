@@ -1,5 +1,12 @@
 ---
 import '../../styles/admin.css';
+import { loadAppConfig, getBrandName, getLogoUrl } from '../../lib/app-config';
+import { hasUploadedLogo } from '../../lib/logo';
+
+const appConfig = await loadAppConfig();
+const brandName = getBrandName(appConfig);
+const logoUrl = getLogoUrl(appConfig);
+const logoUploaded = hasUploadedLogo(appConfig);
 ---
 
 <!doctype html>
@@ -7,13 +14,23 @@ import '../../styles/admin.css';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin — Your Company Supplier Form</title>
+    <title>Admin — {brandName}</title>
   </head>
   <body class="admin-body">
     <header class="admin-header">
-      <div>
-        <p class="admin-eyebrow">Your Company</p>
-        <h1>Supplier Form Admin</h1>
+      <div class="admin-header-brand">
+        {logoUrl && (
+          <img
+            src={logoUrl}
+            alt={brandName}
+            id="admin-header-logo"
+            class:list={['brand-logo', { 'brand-logo-uploaded': logoUploaded }]}
+          />
+        )}
+        <div>
+          <p class="admin-eyebrow">{brandName}</p>
+          <h1>Supplier Form Admin</h1>
+        </div>
       </div>
       <div class="admin-header-actions">
         <a href="/" class="admin-link" target="_blank">View form ↗</a>
@@ -60,7 +77,32 @@ import '../../styles/admin.css';
 
       <section id="panel-settings" class="admin-panel">
         <h2>Settings</h2>
+        <p class="admin-help">White-label branding — company name and logo appear on the public form, emails, PDF reports, and calendar reminders. Use <code>{'{companyName}'}</code> in the supplier declaration text (Questions tab).</p>
         <div class="admin-grid">
+          <label class="admin-field">
+            <span>Company name</span>
+            <input type="text" id="setting-company-name" placeholder="Your Company Ltd" />
+          </label>
+          <label class="admin-field admin-field-wide">
+            <span>Upload logo</span>
+            <div class="logo-upload-row">
+              <input type="file" id="setting-logo-file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" />
+              <button type="button" id="upload-logo-btn" class="admin-btn admin-btn-secondary">Upload</button>
+              <button type="button" id="remove-logo-btn" class="admin-btn admin-btn-secondary" hidden>Remove uploaded logo</button>
+            </div>
+            <p class="admin-help-inline">PNG, JPG, or WebP — max 2 MB. Use a light or transparent logo for the dark header. Uploaded logo takes precedence over URL.</p>
+          </label>
+          <label class="admin-field admin-field-wide">
+            <span>Or logo URL</span>
+            <input type="url" id="setting-logo-url" placeholder="https://example.com/logo.png" />
+          </label>
+          <div id="logo-preview-wrap" class="logo-preview-wrap" hidden>
+            <img id="logo-preview" class="logo-preview" alt="Logo preview" />
+          </div>
+          <label class="admin-field">
+            <span>Form eyebrow</span>
+            <input type="text" id="setting-form-eyebrow" placeholder="Short name shown above form title" />
+          </label>
           <label class="admin-field">
             <span>Notification email</span>
             <input type="email" id="setting-notify-email" placeholder="you@gmail.com" />
@@ -139,6 +181,10 @@ import '../../styles/admin.css';
   type AppConfig = {
     version: number;
     settings: {
+      companyName: string;
+      logoUrl: string;
+      logoFile: string;
+      logoUpdatedAt?: number;
       notifyEmail: string;
       assessorName: string;
       formTitle: string;
@@ -195,6 +241,10 @@ import '../../styles/admin.css';
   }
 
   function renderSettings() {
+    (document.getElementById('setting-company-name') as HTMLInputElement).value = config.settings.companyName || '';
+    (document.getElementById('setting-logo-url') as HTMLInputElement).value = config.settings.logoUrl || '';
+    updateLogoPreview();
+    (document.getElementById('setting-form-eyebrow') as HTMLInputElement).value = config.settings.formEyebrow || '';
     (document.getElementById('setting-notify-email') as HTMLInputElement).value = config.settings.notifyEmail || '';
     (document.getElementById('setting-assessor-name') as HTMLInputElement).value = config.settings.assessorName || '';
     (document.getElementById('setting-form-title') as HTMLInputElement).value = config.settings.formTitle || '';
@@ -511,13 +561,120 @@ import '../../styles/admin.css';
     renderSections();
   });
 
+  function refreshHeaderLogo() {
+    const headerLogo = document.getElementById('admin-header-logo') as HTMLImageElement | null;
+    if (!headerLogo) return;
+
+    const logoUrl = config.settings.logoFile
+      ? `/api/branding/logo?v=${config.settings.logoUpdatedAt || Date.now()}`
+      : config.settings.logoUrl;
+
+    if (!logoUrl) {
+      headerLogo.remove();
+      return;
+    }
+
+    headerLogo.src = logoUrl;
+    headerLogo.classList.toggle('brand-logo-uploaded', Boolean(config.settings.logoFile));
+  }
+
+  function updateLogoPreview() {
+    const urlInput = document.getElementById('setting-logo-url') as HTMLInputElement;
+    const wrap = document.getElementById('logo-preview-wrap') as HTMLDivElement;
+    const img = document.getElementById('logo-preview') as HTMLImageElement;
+    const removeBtn = document.getElementById('remove-logo-btn') as HTMLButtonElement;
+    const uploaded = Boolean(config.settings.logoFile);
+    const url = urlInput.value.trim();
+    const previewUrl = uploaded
+      ? `/api/branding/logo?v=${config.settings.logoUpdatedAt || Date.now()}`
+      : url;
+
+    removeBtn.hidden = !uploaded;
+
+    if (!previewUrl || (!uploaded && !/^https?:\/\//i.test(url))) {
+      wrap.hidden = true;
+      img.removeAttribute('src');
+      return;
+    }
+
+    img.src = previewUrl;
+    img.alt = config.settings.companyName || 'Logo preview';
+    img.classList.toggle('brand-logo-uploaded', uploaded);
+    wrap.hidden = false;
+  }
+
+  document.getElementById('setting-logo-url')?.addEventListener('input', updateLogoPreview);
+
+  document.getElementById('upload-logo-btn')?.addEventListener('click', async () => {
+    const input = document.getElementById('setting-logo-file') as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      showStatus('Choose a logo file first.', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const response = await fetch('/api/admin/logo', { method: 'POST', body: formData });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Upload failed');
+
+      config.settings.logoFile = result.logoFile || 'logo.png';
+      config.settings.logoUpdatedAt = result.logoUpdatedAt || Date.now();
+      config.settings.logoUrl = '';
+      (document.getElementById('setting-logo-url') as HTMLInputElement).value = '';
+      input.value = '';
+      updateLogoPreview();
+      refreshHeaderLogo();
+      showStatus('Logo uploaded — refresh the public form to see it there too.');
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Upload failed', 'error');
+    }
+  });
+
+  document.getElementById('remove-logo-btn')?.addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/admin/logo', { method: 'DELETE' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Remove failed');
+
+      config.settings.logoFile = '';
+      config.settings.logoUpdatedAt = undefined;
+      updateLogoPreview();
+      refreshHeaderLogo();
+      showStatus('Uploaded logo removed.');
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Remove failed', 'error');
+    }
+  });
+
   document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
+    const newLogoUrl = (document.getElementById('setting-logo-url') as HTMLInputElement).value.trim();
+
+    if (newLogoUrl && config.settings.logoFile) {
+      const removeResponse = await fetch('/api/admin/logo', { method: 'DELETE' });
+      if (!removeResponse.ok) {
+        const result = await removeResponse.json();
+        showStatus(result.error || 'Could not switch to URL logo', 'error');
+        return;
+      }
+      config.settings.logoFile = '';
+      config.settings.logoUpdatedAt = undefined;
+    }
+
+    config.settings.companyName = (document.getElementById('setting-company-name') as HTMLInputElement).value.trim();
+    config.settings.logoUrl = newLogoUrl;
+    config.settings.formEyebrow = (document.getElementById('setting-form-eyebrow') as HTMLInputElement).value.trim();
     config.settings.notifyEmail = (document.getElementById('setting-notify-email') as HTMLInputElement).value.trim();
     config.settings.assessorName = (document.getElementById('setting-assessor-name') as HTMLInputElement).value.trim();
     config.settings.formTitle = (document.getElementById('setting-form-title') as HTMLInputElement).value.trim();
     config.settings.formSubtitle = (document.getElementById('setting-form-subtitle') as HTMLInputElement).value.trim();
     try {
       await saveConfig();
+      refreshHeaderLogo();
+      updateLogoPreview();
       showStatus('Settings saved');
     } catch (error) {
       showStatus(error instanceof Error ? error.message : 'Save failed', 'error');

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { config } from './config';
 import { defaultAppConfig, defaultSupplierReviewSchedules } from './default-config';
 import type { AppConfig, FormSection, SupplierReviewSchedule } from './types';
+import { normalizeLogoUrl, getLogoDisplayUrl, syncLogoFileState } from './logo';
 
 function configPath(): string {
   return path.resolve(config.dataDir, 'app-config.json');
@@ -14,7 +15,12 @@ export async function loadAppConfig(): Promise<AppConfig> {
   try {
     const raw = await fs.readFile(filePath, 'utf-8');
     const parsed = JSON.parse(raw) as AppConfig;
-    return mergeWithDefaults(parsed);
+    const merged = mergeWithDefaults(parsed);
+    const synced = await syncLogoFileState(merged);
+    if (synced.settings.logoUpdatedAt !== merged.settings.logoUpdatedAt) {
+      await saveAppConfig(synced);
+    }
+    return synced;
   } catch {
     await saveAppConfig(defaultAppConfig);
     return structuredClone(defaultAppConfig);
@@ -73,6 +79,13 @@ function mergeWithDefaults(parsed: AppConfig): AppConfig {
     settings: {
       ...base.settings,
       ...parsed.settings,
+      companyName:
+        parsed.settings?.companyName?.trim() ||
+        parsed.settings?.formEyebrow?.trim() ||
+        base.settings.companyName,
+      logoUrl: normalizeLogoUrl(parsed.settings?.logoUrl),
+      logoFile: parsed.settings?.logoFile?.trim() || '',
+      logoUpdatedAt: parsed.settings?.logoUpdatedAt,
       notifyEmail: parsed.settings?.notifyEmail || config.notifyEmail,
     },
     sections: ensureSupplierTypeField(parsed.sections?.length ? parsed.sections : base.sections),
@@ -84,6 +97,22 @@ function mergeWithDefaults(parsed: AppConfig): AppConfig {
 export async function saveAppConfig(appConfig: AppConfig): Promise<void> {
   await fs.mkdir(config.dataDir, { recursive: true });
   await fs.writeFile(configPath(), JSON.stringify(appConfig, null, 2), 'utf-8');
+}
+
+export function getBrandName(appConfig: AppConfig): string {
+  return (
+    appConfig.settings.companyName?.trim() ||
+    appConfig.settings.formEyebrow?.trim() ||
+    'Your Company'
+  );
+}
+
+export function getLogoUrl(appConfig: AppConfig): string {
+  return getLogoDisplayUrl(appConfig);
+}
+
+export function applyBrandTemplate(text: string, appConfig: AppConfig): string {
+  return text.replace(/\{companyName\}/g, getBrandName(appConfig));
 }
 
 export function getNotifyEmail(appConfig: AppConfig): string {

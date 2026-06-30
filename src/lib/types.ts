@@ -51,6 +51,10 @@ export interface SupplierReviewSchedule {
 }
 
 export interface AppSettings {
+  companyName: string;
+  logoUrl: string;
+  logoFile?: string;
+  logoUpdatedAt?: number;
   notifyEmail: string;
   assessorName: string;
   formTitle: string;

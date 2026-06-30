@@ -54,6 +54,7 @@ export function generateReviewReminderIcs(
   submissionId: string,
   answers: FormAnswers,
   assessment: SupplierAssessment,
+  brandName: string,
 ): Buffer | null {
   const reviewDate = getReviewDate(answers, assessment);
   if (!reviewDate) return null;
@@ -63,9 +64,10 @@ export function generateReviewReminderIcs(
   endDate.setUTCDate(endDate.getUTCDate() + 1);
 
   const summary = `Supplier Review Due — ${companyName}`;
+  const safeBrand = brandName.replace(/[^a-zA-Z0-9]/g, '') || 'SupplierForm';
   const description = escapeIcsText(
     [
-      `Your Company supplier review reminder`,
+      `${brandName} supplier review reminder`,
       '',
       `Supplier: ${companyName}`,
       `Type(s): ${assessment.supplierTypeLabel || '—'}`,
@@ -76,7 +78,7 @@ export function generateReviewReminderIcs(
     ].join('\n'),
   );
 
-  const uid = `${submissionId}@supplier-form-supplier-form`;
+  const uid = `${submissionId}@${safeBrand.toLowerCase()}-supplier-form`;
   const dtStamp = formatIcsDateTime(new Date());
   const dtStart = formatIcsDate(reviewDate);
   const dtEnd = formatIcsDate(endDate);
@@ -84,7 +86,7 @@ export function generateReviewReminderIcs(
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Your Company//Supplier Review Reminder//EN',
+    `PRODID:-//${escapeIcsText(brandName)}//Supplier Review Reminder//EN`,
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

@@ -5,12 +5,18 @@ interface Props {
   title?: string;
   eyebrow?: string;
   subtitle?: string;
+  companyName?: string;
+  logoUrl?: string;
+  logoUploaded?: boolean;
 }
 
 const {
-  title = "Your Company Supplier Approval Questionnaire",
-  eyebrow = "Your Company",
+  title = 'Supplier Approval Questionnaire',
+  eyebrow = 'Your Company',
   subtitle = 'Supplier Approval & Food Safety Assessment — please complete all required sections.',
+  companyName = eyebrow,
+  logoUrl = '',
+  logoUploaded = false,
 } = Astro.props;
 ---
 
@@ -19,16 +25,28 @@ const {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Supplier Approval & Food Safety Assessment for Your Company" />
+    <meta name="description" content={`Supplier Approval & Food Safety Assessment for ${companyName}`} />
     <title>{title}</title>
   </head>
   <body>
     <div class="page">
       <header class="header">
         <div class="header-inner">
-          <p class="eyebrow">{eyebrow}</p>
-          <h1>{title}</h1>
-          <p class="subtitle">{subtitle}</p>
+          <div class="header-brand">
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt={companyName}
+                class:list={['brand-logo', { 'brand-logo-uploaded': logoUploaded }]}
+                loading="eager"
+              />
+            )}
+            <div class="header-text">
+              <p class="eyebrow">{eyebrow}</p>
+              <h1>{title}</h1>
+              <p class="subtitle">{subtitle}</p>
+            </div>
+          </div>
         </div>
       </header>
       <main class="main">

@@ -1,5 +1,12 @@
 ---
 import '../../styles/admin.css';
+import { loadAppConfig, getBrandName, getLogoUrl } from '../../lib/app-config';
+import { hasUploadedLogo } from '../../lib/logo';
+
+const appConfig = await loadAppConfig();
+const brandName = getBrandName(appConfig);
+const logoUrl = getLogoUrl(appConfig);
+const logoUploaded = hasUploadedLogo(appConfig);
 ---
 
 <!doctype html>
@@ -7,12 +14,19 @@ import '../../styles/admin.css';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Login — Your Company</title>
+    <title>Admin Login — {brandName}</title>
   </head>
   <body class="admin-body">
     <div class="login-card">
+      {logoUrl && (
+        <img
+          src={logoUrl}
+          alt={brandName}
+          class:list={['brand-logo', 'login-logo', { 'brand-logo-uploaded': logoUploaded }]}
+        />
+      )}
       <h1>Admin Login</h1>
-      <p>Your Company Supplier Form</p>
+      <p>{brandName} Supplier Form</p>
       <form id="login-form">
         <label class="admin-field">
           <span>Password</span>
@@ -40,12 +54,13 @@ import '../../styles/admin.css';
       body: JSON.stringify({ password }),
     });
 
-    if (!response.ok) {
-      errorEl.textContent = 'Invalid password';
-      errorEl.hidden = false;
+    if (response.ok) {
+      window.location.href = '/admin';
       return;
     }
 
-    window.location.href = '/admin';
+    const result = await response.json();
+    errorEl.textContent = result.error || 'Login failed';
+    errorEl.hidden = false;
   });
 </script>

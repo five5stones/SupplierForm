@@ -25,11 +25,13 @@ export const defaultSupplierReviewSchedules = [
 export const defaultAppConfig: AppConfig = {
   version: 1,
   settings: {
+    companyName: 'Your Company',
+    logoUrl: '',
     notifyEmail: '',
-    assessorName: 'David Redrup',
-    formTitle: "Your Company Supplier Approval Questionnaire",
+    assessorName: '',
+    formTitle: 'Supplier Approval Questionnaire',
     formSubtitle: 'Supplier Approval & Food Safety Assessment — please complete all required sections.',
-    formEyebrow: "Your Company",
+    formEyebrow: 'Your Company',
   },
   supplierReviewSchedules: defaultSupplierReviewSchedules,
   scoringCategories: [
@@ -237,7 +239,7 @@ export const defaultAppConfig: AppConfig = {
       id: 'declaration',
       title: 'Supplier Declaration',
       declarationText:
-        "I confirm that the information provided is accurate and that Your Company will be notified of any significant changes affecting food safety, product quality, allergen management or legal compliance.",
+        'I confirm that the information provided is accurate and that {companyName} will be notified of any significant changes affecting food safety, product quality, allergen management or legal compliance.',
       fields: [
         { id: 'declarationAccepted', type: 'declaration', label: 'I confirm the above declaration', required: true },
         { id: 'declarationName', type: 'text', label: 'Name', required: true },

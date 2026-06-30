@@ -21,6 +21,74 @@
   font-size: 1.5rem;
 }
 
+.admin-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-logo {
+  max-height: 48px;
+  max-width: 160px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-logo-uploaded {
+  background: #fff;
+  border-radius: 10px;
+  padding: 4px 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.login-logo {
+  display: block;
+  margin: 0 auto 16px;
+  max-height: 56px;
+  max-width: 200px;
+}
+
+.logo-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.logo-upload-row input[type='file'] {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.admin-help-inline {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.logo-preview-wrap {
+  grid-column: 1 / -1;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.logo-preview {
+  display: block;
+  max-height: 64px;
+  max-width: 220px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.admin-field-wide {
+  grid-column: 1 / -1;
+}
+
 .admin-eyebrow {
   margin: 0;
   font-size: 12px;

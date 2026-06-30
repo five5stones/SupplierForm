@@ -1,7 +1,7 @@
 {
   "name": "supplier-form",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "dev": "astro dev --port 4000 --host",
     "build": "astro build",

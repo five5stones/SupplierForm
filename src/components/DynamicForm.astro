@@ -1,11 +1,13 @@
 ---
 import type { AppConfig } from '../lib/types';
+import { applyBrandTemplate } from '../lib/app-config';
 
 interface Props {
   appConfig: AppConfig;
 }
 
 const { appConfig } = Astro.props;
+const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
 ---
 
 <form id="supplier-form" class="form" enctype="multipart/form-data">
@@ -17,7 +19,7 @@ const { appConfig } = Astro.props;
           {section.optional && <span class="optional-tag">Optional</span>}
         </h2>
 
-        {section.declarationText && <p class="declaration-text">{section.declarationText}</p>}
+        {section.declarationText && <p class="declaration-text">{brandTemplate(section.declarationText)}</p>}
 
         {
           section.fields.map((field) => {

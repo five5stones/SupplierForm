@@ -1,7 +1,7 @@
 services:
   supplier-form:
     build: .
-    image: supplier-form:0.1.0
+    image: supplier-form:0.2.0
     container_name: supplier-form
     ports:
       - "4000:4000"

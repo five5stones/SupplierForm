@@ -1,8 +1,8 @@
-# Your Company — Supplier Approval Questionnaire
+# Supplier Approval Questionnaire
 
-**Version 0.1.0**
+**Version 0.2.0**
 
-Dynamic HACCP supplier approval questionnaire with weighted scoring, PDF reports, Gmail notifications (including calendar reminders), and a password-protected admin panel. Runs on **port 4000** and ships with Docker support.
+Dynamic HACCP supplier approval questionnaire with weighted scoring, PDF reports, Gmail notifications (including calendar reminders), and a password-protected admin panel. **White-label ready** — configure your company name and form branding from the admin Settings tab. Runs on **port 4000** and ships with Docker support.
 
 ## Features
 
@@ -33,10 +33,31 @@ Each approved submission sends an HTML email to `NOTIFY_EMAIL` containing:
 | **Questions** | Add, edit, reorder, and delete form sections and fields |
 | **Scoring Weights** | Adjust category weights and enable/disable categories |
 | **Review Schedules** | Set supplier types and review intervals (12 / 24 / 36 months) |
-| **Settings** | Notification email, assessor name, form title, admin password |
+| **Settings** | Company name, form branding, notification email, assessor name, admin password |
 | **Previous Answers** | Browse submissions; download assessment PDF, questionnaire PDF, attachments (ZIP or individual) |
 
 Configuration is persisted in `data/app-config.json`. Submissions and uploads are stored under `data/uploads/{submission-id}/`.
+
+### White-label branding
+
+In **Admin → Settings**, set:
+
+| Field | Where it appears |
+|-------|------------------|
+| **Company name** | Email headers, PDF reports, calendar reminders, meta description |
+| **Logo** | Upload PNG/JPG/WebP in Settings, or paste a public logo URL |
+| **Form eyebrow** | Small label above the form title on the public page |
+| **Form title / subtitle** | Public questionnaire header |
+
+The supplier declaration (Questions tab) supports a `{companyName}` placeholder — it is replaced automatically when the form is rendered.
+
+**Logo** — upload PNG, JPG, or WebP (max 2 MB) in Admin → Settings, or paste a public HTTPS URL. Uploaded logos take precedence and are embedded in emails and PDFs automatically.
+
+For SMTP, use your own sender name in `.env`:
+
+```env
+SMTP_FROM="Your Company <you@gmail.com>"
+```
 
 ---
 
@@ -180,12 +201,19 @@ Admin settings (notify email, assessor, form title, review schedules) can also b
 ```bash
 git clone https://github.com/five5stones/SupplierForm.git
 cd SupplierForm
-git checkout v0.1.0   # optional — pin to this release
+git checkout v0.2.0   # optional — pin to this release
 ```
 
 ---
 
 ## Version history
+
+### 0.2.0
+- White-label branding — configurable company name, form title, eyebrow, and subtitle
+- `{companyName}` placeholder in supplier declaration text
+- Logo via public URL or file upload (PNG/JPG/WebP, max 2 MB)
+- Logo appears on public form, admin pages, emails, and PDF reports
+- Cache-safe logo updates with versioned URLs
 
 ### 0.1.0
 - Initial release
@@ -201,4 +229,4 @@ git checkout v0.1.0   # optional — pin to this release
 
 ## Licence
 
-Private — Your Company internal use.
+Private — internal use.
