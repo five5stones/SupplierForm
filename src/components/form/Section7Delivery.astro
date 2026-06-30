@@ -1,0 +1,16 @@
+---
+import FormRadio from './FormRadio.astro';
+---
+
+<section class="section">
+  <h2>Section 7 – Delivery &amp; Transport</h2>
+
+  <FormRadio name="deliveryVehiclesCleaned" number={27} label="Are delivery vehicles cleaned regularly?" />
+  <FormRadio name="chilledDeliveriesTemperatureControlled" number={28} label="Are chilled deliveries temperature controlled?" />
+  <FormRadio name="frozenBelowMinus18" number={29} label="Are frozen products maintained below -18°C?" />
+
+  <label class="field">
+    <span>30. How is temperature monitored during transport? *</span>
+    <textarea name="transportTemperatureMonitoring" rows="3" required></textarea>
+  </label>
+</section>

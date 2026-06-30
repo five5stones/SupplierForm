@@ -1,0 +1,182 @@
+---
+import type { AppConfig } from '../lib/types';
+
+interface Props {
+  appConfig: AppConfig;
+}
+
+const { appConfig } = Astro.props;
+---
+
+<form id="supplier-form" class="form" enctype="multipart/form-data">
+  {
+    appConfig.sections.map((section) => (
+      <section class:list={['section', { 'section-optional': section.optional }]}>
+        <h2>
+          {section.title}
+          {section.optional && <span class="optional-tag">Optional</span>}
+        </h2>
+
+        {section.declarationText && <p class="declaration-text">{section.declarationText}</p>}
+
+        {
+          section.fields.map((field) => {
+            if (field.type === 'hint') {
+              return <p class="hint">{field.label}</p>;
+            }
+
+            if (field.type === 'radio') {
+              return (
+                <div class="question">
+                  {field.number !== undefined && <span class="q-num">{field.number}.</span>}
+                  <p class="q-label">{field.label}{field.required ? ' *' : ''}</p>
+                  <div class="radio-row">
+                    {(field.options || []).map((opt) => (
+                      <label class="radio">
+                        <input type="radio" name={field.id} value={opt.value} required={field.required} />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            if (field.type === 'select') {
+              const options = field.options || [];
+
+              return (
+                <label class="field">
+                  <span>{field.number ? `${field.number}. ` : ''}{field.label}{field.required ? ' *' : ''}</span>
+                  <select name={field.id} required={field.required}>
+                    <option value="">Select…</option>
+                    {options.map((opt) => (
+                      <option value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </label>
+              );
+            }
+
+            if (field.type === 'checkbox-group') {
+              const options =
+                field.id === 'supplierType'
+                  ? appConfig.supplierReviewSchedules.map((schedule) => ({
+                      value: schedule.id,
+                      label: schedule.label,
+                    }))
+                  : field.options || [];
+
+              return (
+                <fieldset class="fieldset">
+                  <legend>{field.label}{field.required ? ' *' : ''}</legend>
+                  {field.id === 'supplierType' && (
+                    <p class="hint">Select all that apply.</p>
+                  )}
+                  <div class="checklist checklist-docs">
+                    {options.map((opt) => (
+                      <label class="checkbox">
+                        <input type="checkbox" name={field.id} value={opt.value} />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              );
+            }
+
+            if (field.type === 'declaration') {
+              return (
+                <label class="checkbox">
+                  <input type="checkbox" name={field.id} required={field.required} />
+                  <span>{field.label}{field.required ? ' *' : ''}</span>
+                </label>
+              );
+            }
+
+            if (field.type === 'textarea') {
+              return (
+                <label class="field">
+                  <span>{field.number ? `${field.number}. ` : ''}{field.label}{field.required ? ' *' : ''}</span>
+                  <textarea name={field.id} rows={field.rows || 3} required={field.required} placeholder={field.placeholder} />
+                </label>
+              );
+            }
+
+            if (field.type === 'file') {
+              return (
+                <label class="field">
+                  <span>{field.label}</span>
+                  <input type="file" name={field.id} multiple accept={field.accept} />
+                </label>
+              );
+            }
+
+            return (
+              <label class="field">
+                <span>{field.number ? `${field.number}. ` : ''}{field.label}{field.required ? ' *' : ''}</span>
+                <input
+                  type={field.type}
+                  name={field.id}
+                  required={field.required}
+                  placeholder={field.placeholder}
+                  autocomplete={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : undefined}
+                />
+              </label>
+            );
+          })
+        }
+      </section>
+    ))
+  }
+
+  <input type="text" name="_honeypot" class="honeypot" tabindex="-1" autocomplete="off" />
+
+  <div id="form-status" class="status" hidden></div>
+  <button type="submit" class="submit" id="submit-btn">Submit Questionnaire</button>
+</form>
+
+<script>
+  const form = document.getElementById('supplier-form') as HTMLFormElement;
+  const status = document.getElementById('form-status') as HTMLDivElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const today = new Date().toISOString().split('T')[0];
+
+  for (const name of ['dateCompleted', 'declarationDate']) {
+    const input = form.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
+    if (input && !input.value) input.value = today;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.hidden = true;
+    status.className = 'status';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+
+    try {
+      const response = await fetch('/api/submit', { method: 'POST', body: new FormData(form) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Submission failed.');
+
+      const pct = result.assessment?.percentage;
+      status.textContent = pct
+        ? `Thank you! Reference: ${result.submissionId} (Assessment: ${pct}%)`
+        : `Thank you! Your questionnaire was received. Reference: ${result.submissionId}`;
+      status.className = 'status success';
+      status.hidden = false;
+      form.reset();
+      for (const name of ['dateCompleted', 'declarationDate']) {
+        const input = form.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
+        if (input) input.value = today;
+      }
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'Something went wrong.';
+      status.className = 'status error';
+      status.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Questionnaire';
+    }
+  });
+</script>

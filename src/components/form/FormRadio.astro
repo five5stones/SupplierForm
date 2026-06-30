@@ -1,0 +1,35 @@
+---
+interface Props {
+  name: string;
+  label: string;
+  number?: number;
+  required?: boolean;
+  options?: { value: string; label: string }[];
+}
+
+const {
+  name,
+  label,
+  number,
+  required = true,
+  options = [
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+  ],
+} = Astro.props;
+---
+
+<div class="question">
+  {number !== undefined && <span class="q-num">{number}.</span>}
+  <p class="q-label">{label}</p>
+  <div class="radio-row">
+    {
+      options.map((opt) => (
+        <label class="radio">
+          <input type="radio" name={name} value={opt.value} required={required} />
+          {opt.label}
+        </label>
+      ))
+    }
+  </div>
+</div>

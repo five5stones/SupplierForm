@@ -1,0 +1,51 @@
+---
+import '../../styles/admin.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login — Your Company</title>
+  </head>
+  <body class="admin-body">
+    <div class="login-card">
+      <h1>Admin Login</h1>
+      <p>Your Company Supplier Form</p>
+      <form id="login-form">
+        <label class="admin-field">
+          <span>Password</span>
+          <input type="password" name="password" required autofocus />
+        </label>
+        <div id="login-error" class="admin-error" hidden></div>
+        <button type="submit" class="admin-btn">Sign in</button>
+      </form>
+    </div>
+  </body>
+</html>
+
+<script>
+  const form = document.getElementById('login-form') as HTMLFormElement;
+  const errorEl = document.getElementById('login-error') as HTMLDivElement;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorEl.hidden = true;
+
+    const password = new FormData(form).get('password');
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+
+    if (!response.ok) {
+      errorEl.textContent = 'Invalid password';
+      errorEl.hidden = false;
+      return;
+    }
+
+    window.location.href = '/admin';
+  });
+</script>

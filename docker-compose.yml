@@ -1,0 +1,22 @@
+services:
+  supplier-form:
+    build: .
+    image: supplier-form:0.1.0
+    container_name: supplier-form
+    ports:
+      - "4000:4000"
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4000
+      DATA_DIR: /app/data
+      UPLOAD_DIR: /app/data/uploads
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

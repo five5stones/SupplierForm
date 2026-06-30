@@ -1,0 +1,26 @@
+---
+import FormRadio from './FormRadio.astro';
+---
+
+<section class="section">
+  <h2>Section 6 – Quality Assurance</h2>
+
+  <FormRadio name="productSpecificationsAvailable" number={23} label="Are product specifications available?" />
+
+  <div class="question">
+    <span class="q-num">24.</span>
+    <p class="q-label">Are Certificates of Analysis available where applicable?</p>
+    <div class="radio-row">
+      <label class="radio"><input type="radio" name="certificatesOfAnalysis" value="yes" required /> Yes</label>
+      <label class="radio"><input type="radio" name="certificatesOfAnalysis" value="no" required /> No</label>
+      <label class="radio"><input type="radio" name="certificatesOfAnalysis" value="na" required /> N/A</label>
+    </div>
+  </div>
+
+  <FormRadio name="productsToAgreedSpecifications" number={25} label="Are products supplied to agreed specifications?" />
+
+  <label class="field">
+    <span>26. How are customer complaints investigated? *</span>
+    <textarea name="complaintInvestigationProcess" rows="3" required></textarea>
+  </label>
+</section>

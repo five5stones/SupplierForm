@@ -1,0 +1,56 @@
+---
+import FormRadio from './FormRadio.astro';
+---
+
+<section class="section">
+  <h2>Section 3 – Hygiene Standards</h2>
+
+  <div class="question">
+    <span class="q-num">9.</span>
+    <p class="q-label">What is your latest Food Hygiene Rating?</p>
+    <div class="radio-row">
+      <label class="radio"><input type="radio" name="hygieneRating" value="5" required /> 5</label>
+      <label class="radio"><input type="radio" name="hygieneRating" value="4" required /> 4</label>
+      <label class="radio"><input type="radio" name="hygieneRating" value="3" required /> 3</label>
+      <label class="radio"><input type="radio" name="hygieneRating" value="other" required /> Other</label>
+    </div>
+  </div>
+
+  <label class="field">
+    <span>Date Awarded</span>
+    <input type="date" name="hygieneRatingDate" />
+  </label>
+
+  <FormRadio name="cleaningSchedulesDocumented" number={10} label="Are routine cleaning schedules documented?" />
+  <FormRadio name="cleaningChemicalsSeparate" number={11} label="Are cleaning chemicals stored separately from food?" />
+
+  <div class="question">
+    <span class="q-num">12.</span>
+    <p class="q-label">Is pest control undertaken by:</p>
+    <div class="radio-row">
+      <label class="radio"><input type="radio" name="pestControlBy" value="external" required /> External Contractor</label>
+      <label class="radio"><input type="radio" name="pestControlBy" value="internal" required /> Internal</label>
+    </div>
+  </div>
+
+  <div class="grid">
+    <label class="field">
+      <span>Company Name</span>
+      <input type="text" name="pestControlCompany" />
+    </label>
+    <label class="field">
+      <span>Frequency</span>
+      <input type="text" name="pestControlFrequency" />
+    </label>
+  </div>
+
+  <FormRadio name="temperatureRecordsMaintained" number={13} label="Are temperature records maintained?" />
+  <FormRadio name="staffFoodHygieneTraining" number={14} label="Are staff trained in Food Hygiene?" />
+
+  <label class="field">
+    <span>Training Frequency</span>
+    <input type="text" name="trainingFrequency" />
+  </label>
+
+  <FormRadio name="allergenAwarenessTraining" number={15} label="Do staff receive allergen awareness training?" />
+</section>

@@ -1,0 +1,23 @@
+---
+import FormRadio from './FormRadio.astro';
+---
+
+<section class="section">
+  <h2>Section 4 – Traceability</h2>
+
+  <fieldset class="fieldset">
+    <legend>16. Can all products be fully traced?</legend>
+    <div class="checklist">
+      <label class="checkbox"><input type="checkbox" name="traceability" value="One Step Back" /> One Step Back</label>
+      <label class="checkbox"><input type="checkbox" name="traceability" value="One Step Forward" /> One Step Forward</label>
+      <label class="checkbox"><input type="checkbox" name="traceability" value="Full Traceability" /> Full Traceability</label>
+    </div>
+  </fieldset>
+
+  <FormRadio name="recallWithinFourHours" number={17} label="Can products be recalled within four hours?" />
+
+  <label class="field">
+    <span>18. How long are traceability records retained? *</span>
+    <input type="text" name="traceabilityRecordsRetention" required placeholder="e.g. 3 years" />
+  </label>
+</section>

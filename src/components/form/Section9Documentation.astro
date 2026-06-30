@@ -1,0 +1,41 @@
+---
+const documentTypes = [
+  'Public Liability Insurance',
+  'Product Liability Insurance',
+  'Food Hygiene Rating',
+  'HACCP Summary',
+  'SALSA/BRCGS/ISO Certificate',
+  'Product Specifications',
+  'Allergen Information',
+  'Traceability Procedure',
+  'Pest Control Certificate',
+  'Food Safety Policy',
+  'Cleaning Schedule Example',
+  'Temperature Monitoring Procedure',
+  'Recall Procedure',
+];
+---
+
+<section class="section">
+  <h2>Section 9 – Documentation</h2>
+  <p class="hint">Please tick all documents you are attaching, then upload files below (PDF, JPG, PNG — max 10MB each, up to 15 files).</p>
+
+  <fieldset class="fieldset">
+    <legend>Please attach where applicable:</legend>
+    <div class="checklist checklist-docs">
+      {
+        documentTypes.map((doc) => (
+          <label class="checkbox">
+            <input type="checkbox" name="documentTypes" value={doc} />
+            {doc}
+          </label>
+        ))
+      }
+    </div>
+  </fieldset>
+
+  <label class="field">
+    <span>Upload Documents</span>
+    <input type="file" name="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" />
+  </label>
+</section>

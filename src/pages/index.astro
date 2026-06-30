@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+import DynamicForm from '../components/DynamicForm.astro';
+import { loadAppConfig } from '../lib/app-config';
+
+const appConfig = await loadAppConfig();
+if (!appConfig.settings.notifyEmail && process.env.NOTIFY_EMAIL) {
+  appConfig.settings.notifyEmail = process.env.NOTIFY_EMAIL;
+}
+---
+
+<Layout
+  title={appConfig.settings.formTitle}
+  eyebrow={appConfig.settings.formEyebrow}
+  subtitle={appConfig.settings.formSubtitle}
+>
+  <DynamicForm appConfig={appConfig} />
+</Layout>

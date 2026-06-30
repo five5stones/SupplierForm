@@ -1,0 +1,565 @@
+---
+import '../../styles/admin.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin — Your Company Supplier Form</title>
+  </head>
+  <body class="admin-body">
+    <header class="admin-header">
+      <div>
+        <p class="admin-eyebrow">Your Company</p>
+        <h1>Supplier Form Admin</h1>
+      </div>
+      <div class="admin-header-actions">
+        <a href="/" class="admin-link" target="_blank">View form ↗</a>
+        <button type="button" id="logout-btn" class="admin-btn admin-btn-secondary">Log out</button>
+      </div>
+    </header>
+
+    <nav class="admin-tabs">
+      <button type="button" class="admin-tab active" data-tab="questions">Questions</button>
+      <button type="button" class="admin-tab" data-tab="scoring">Scoring Weights</button>
+      <button type="button" class="admin-tab" data-tab="reviews">Review Schedules</button>
+      <button type="button" class="admin-tab" data-tab="settings">Settings</button>
+      <button type="button" class="admin-tab" data-tab="submissions">Previous Answers</button>
+    </nav>
+
+    <main class="admin-main">
+      <div id="status" class="admin-status" hidden></div>
+
+      <section id="panel-questions" class="admin-panel active">
+        <div class="admin-panel-head">
+          <h2>Questionnaire Sections</h2>
+          <button type="button" id="add-section-btn" class="admin-btn">+ Add Section</button>
+        </div>
+        <p class="admin-help">Edit, reorder, add or remove questions. Scoring uses field IDs — avoid changing IDs on existing scored questions.</p>
+        <div id="sections-root"></div>
+      </section>
+
+      <section id="panel-scoring" class="admin-panel">
+        <div class="admin-panel-head">
+          <h2>Scoring Matrix Weights</h2>
+          <p class="admin-weight-total">Total weight: <strong id="weight-total">0</strong>%</p>
+        </div>
+        <p class="admin-help">Adjust category weights. Scoring logic maps to built-in category IDs. Maximum score is always 500 points.</p>
+        <div id="scoring-root"></div>
+      </section>
+
+      <section id="panel-reviews" class="admin-panel">
+        <div class="admin-panel-head">
+          <h2>Supplier Review Schedules</h2>
+        </div>
+        <p class="admin-help">Set how often each supplier type must be re-assessed. Suppliers can select multiple types on the questionnaire — the shortest review interval (highest risk) is used for the next review date.</p>
+        <div id="reviews-root"></div>
+      </section>
+
+      <section id="panel-settings" class="admin-panel">
+        <h2>Settings</h2>
+        <div class="admin-grid">
+          <label class="admin-field">
+            <span>Notification email</span>
+            <input type="email" id="setting-notify-email" placeholder="you@gmail.com" />
+          </label>
+          <label class="admin-field">
+            <span>Assessor name</span>
+            <input type="text" id="setting-assessor-name" />
+          </label>
+          <label class="admin-field">
+            <span>Form title</span>
+            <input type="text" id="setting-form-title" />
+          </label>
+          <label class="admin-field">
+            <span>Form subtitle</span>
+            <input type="text" id="setting-form-subtitle" />
+          </label>
+        </div>
+        <button type="button" id="save-settings-btn" class="admin-btn">Save Settings</button>
+
+        <div class="admin-divider"></div>
+
+        <h3 class="admin-subheading">Change Admin Password</h3>
+        <p class="admin-help">Update the password used to sign in to this admin panel.</p>
+        <div class="admin-grid">
+          <label class="admin-field">
+            <span>Current password</span>
+            <input type="password" id="password-current" autocomplete="current-password" />
+          </label>
+          <label class="admin-field">
+            <span>New password</span>
+            <input type="password" id="password-new" autocomplete="new-password" />
+          </label>
+          <label class="admin-field">
+            <span>Confirm new password</span>
+            <input type="password" id="password-confirm" autocomplete="new-password" />
+          </label>
+        </div>
+        <button type="button" id="change-password-btn" class="admin-btn admin-btn-secondary">Update Password</button>
+      </section>
+
+      <section id="panel-submissions" class="admin-panel">
+        <h2>Previous Submissions</h2>
+        <div id="submissions-root" class="admin-table-wrap"></div>
+        <div id="submission-detail" class="submission-detail" hidden></div>
+      </section>
+    </main>
+
+    <footer class="admin-footer">
+      <button type="button" id="save-all-btn" class="admin-btn admin-btn-primary">Save All Changes</button>
+    </footer>
+  </body>
+</html>
+
+<script>
+  type FieldOption = { value: string; label: string };
+  type FormField = {
+    id: string;
+    type: string;
+    label: string;
+    required?: boolean;
+    placeholder?: string;
+    rows?: number;
+    number?: number;
+    options?: FieldOption[];
+    accept?: string;
+  };
+  type FormSection = {
+    id: string;
+    title: string;
+    optional?: boolean;
+    declarationText?: string;
+    fields: FormField[];
+  };
+  type ScoringCategory = { id: string; label: string; weight: number; enabled: boolean };
+  type SupplierReviewSchedule = { id: string; label: string; reviewMonths: number };
+  type AppConfig = {
+    version: number;
+    settings: {
+      notifyEmail: string;
+      assessorName: string;
+      formTitle: string;
+      formSubtitle: string;
+      formEyebrow: string;
+    };
+    sections: FormSection[];
+    scoringCategories: ScoringCategory[];
+    supplierReviewSchedules: SupplierReviewSchedule[];
+  };
+
+  const FIELD_TYPES = ['text', 'email', 'tel', 'url', 'date', 'textarea', 'radio', 'select', 'checkbox-group', 'file', 'hint', 'declaration'];
+
+  let config: AppConfig;
+
+  const statusEl = document.getElementById('status') as HTMLDivElement;
+  const sectionsRoot = document.getElementById('sections-root') as HTMLDivElement;
+  const scoringRoot = document.getElementById('scoring-root') as HTMLDivElement;
+  const reviewsRoot = document.getElementById('reviews-root') as HTMLDivElement;
+  const submissionsRoot = document.getElementById('submissions-root') as HTMLDivElement;
+  const submissionDetail = document.getElementById('submission-detail') as HTMLDivElement;
+  const weightTotalEl = document.getElementById('weight-total') as HTMLElement;
+
+  function showStatus(message: string, type: 'success' | 'error' = 'success') {
+    statusEl.textContent = message;
+    statusEl.className = `admin-status ${type}`;
+    statusEl.hidden = false;
+    setTimeout(() => { statusEl.hidden = true; }, 3500);
+  }
+
+  function slugify(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 48) || `field_${Date.now()}`;
+  }
+
+  async function loadConfig() {
+    const response = await fetch('/api/admin/config');
+    config = await response.json();
+    renderSections();
+    renderScoring();
+    renderReviews();
+    renderSettings();
+  }
+
+  async function saveConfig() {
+    const response = await fetch('/api/admin/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Save failed');
+    }
+  }
+
+  function renderSettings() {
+    (document.getElementById('setting-notify-email') as HTMLInputElement).value = config.settings.notifyEmail || '';
+    (document.getElementById('setting-assessor-name') as HTMLInputElement).value = config.settings.assessorName || '';
+    (document.getElementById('setting-form-title') as HTMLInputElement).value = config.settings.formTitle || '';
+    (document.getElementById('setting-form-subtitle') as HTMLInputElement).value = config.settings.formSubtitle || '';
+  }
+
+  function renderReviews() {
+    reviewsRoot.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Supplier Type</th>
+            <th>Review</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${config.supplierReviewSchedules.map((item, index) => `
+            <tr data-review-index="${index}">
+              <td><input type="text" class="admin-inline-input" data-review-label value="${escapeAttr(item.label)}" /></td>
+              <td>
+                <select class="admin-inline-input" data-review-months>
+                  <option value="12" ${item.reviewMonths === 12 ? 'selected' : ''}>Every 12 months</option>
+                  <option value="24" ${item.reviewMonths === 24 ? 'selected' : ''}>Every 24 months</option>
+                  <option value="36" ${item.reviewMonths === 36 ? 'selected' : ''}>Every 36 months</option>
+                </select>
+              </td>
+              <td><button type="button" class="admin-btn-small admin-btn-danger" data-delete-review="${index}">Remove</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <button type="button" id="add-review-btn" class="admin-btn admin-btn-secondary">+ Add Supplier Type</button>
+    `;
+
+    reviewsRoot.querySelectorAll('[data-review-index]').forEach((row) => {
+      const index = Number((row as HTMLElement).dataset.reviewIndex);
+      row.querySelector('[data-review-label]')?.addEventListener('input', (e) => {
+        config.supplierReviewSchedules[index].label = (e.target as HTMLInputElement).value;
+      });
+      row.querySelector('[data-review-months]')?.addEventListener('change', (e) => {
+        config.supplierReviewSchedules[index].reviewMonths = Number((e.target as HTMLSelectElement).value) || 12;
+      });
+      row.querySelector('[data-delete-review]')?.addEventListener('click', () => {
+        if (config.supplierReviewSchedules.length <= 1) {
+          showStatus('At least one supplier type is required', 'error');
+          return;
+        }
+        if (confirm('Remove this supplier type?')) {
+          config.supplierReviewSchedules.splice(index, 1);
+          renderReviews();
+        }
+      });
+    });
+
+    document.getElementById('add-review-btn')?.addEventListener('click', () => {
+      const label = prompt('Supplier type name?');
+      if (!label?.trim()) return;
+      config.supplierReviewSchedules.push({
+        id: slugify(label),
+        label: label.trim(),
+        reviewMonths: 12,
+      });
+      renderReviews();
+    });
+  }
+
+  function renderScoring() {
+    scoringRoot.innerHTML = config.scoringCategories.map((cat, index) => `
+      <div class="admin-card" data-scoring-index="${index}">
+        <label class="admin-checkbox"><input type="checkbox" data-scoring-enabled ${cat.enabled ? 'checked' : ''} /> Enabled</label>
+        <label class="admin-field"><span>Label</span><input type="text" data-scoring-label value="${escapeAttr(cat.label)}" /></label>
+        <label class="admin-field"><span>Weight (%)</span><input type="number" min="0" max="100" data-scoring-weight value="${cat.weight}" /></label>
+        <p class="admin-muted">ID: ${cat.id}</p>
+      </div>
+    `).join('');
+
+    updateWeightTotal();
+
+    scoringRoot.querySelectorAll('[data-scoring-index]').forEach((card) => {
+      const index = Number((card as HTMLElement).dataset.scoringIndex);
+      card.querySelector('[data-scoring-enabled]')?.addEventListener('change', (e) => {
+        config.scoringCategories[index].enabled = (e.target as HTMLInputElement).checked;
+        updateWeightTotal();
+      });
+      card.querySelector('[data-scoring-label]')?.addEventListener('input', (e) => {
+        config.scoringCategories[index].label = (e.target as HTMLInputElement).value;
+      });
+      card.querySelector('[data-scoring-weight]')?.addEventListener('input', (e) => {
+        config.scoringCategories[index].weight = Number((e.target as HTMLInputElement).value) || 0;
+        updateWeightTotal();
+      });
+    });
+  }
+
+  function updateWeightTotal() {
+    const total = config.scoringCategories.filter((c) => c.enabled).reduce((sum, c) => sum + c.weight, 0);
+    weightTotalEl.textContent = String(total);
+    weightTotalEl.style.color = total === 100 || total === 105 ? '#059669' : '#d97706';
+  }
+
+  function escapeAttr(value: string): string {
+    return value.replace(/"/g, '&quot;');
+  }
+
+  function renderSections() {
+    sectionsRoot.innerHTML = config.sections.map((section, sIndex) => `
+      <details class="admin-section" open>
+        <summary>
+          <input type="text" class="section-title-input" data-section-title="${sIndex}" value="${escapeAttr(section.title)}" />
+          <button type="button" class="admin-btn-small admin-btn-danger" data-delete-section="${sIndex}">Delete Section</button>
+        </summary>
+        <div class="admin-section-body">
+          <label class="admin-checkbox"><input type="checkbox" data-section-optional="${sIndex}" ${section.optional ? 'checked' : ''} /> Optional section</label>
+          <div class="admin-fields" data-section-fields="${sIndex}"></div>
+          <button type="button" class="admin-btn admin-btn-secondary" data-add-field="${sIndex}">+ Add Question</button>
+        </div>
+      </details>
+    `).join('');
+
+    config.sections.forEach((section, sIndex) => {
+      const fieldsRoot = sectionsRoot.querySelector(`[data-section-fields="${sIndex}"]`) as HTMLDivElement;
+      fieldsRoot.innerHTML = section.fields.map((field, fIndex) => fieldEditorHtml(section, sIndex, field, fIndex)).join('');
+
+      sectionsRoot.querySelector(`[data-section-title="${sIndex}"]`)?.addEventListener('input', (e) => {
+        config.sections[sIndex].title = (e.target as HTMLInputElement).value;
+      });
+      sectionsRoot.querySelector(`[data-section-optional="${sIndex}"]`)?.addEventListener('change', (e) => {
+        config.sections[sIndex].optional = (e.target as HTMLInputElement).checked;
+      });
+      sectionsRoot.querySelector(`[data-delete-section="${sIndex}"]`)?.addEventListener('click', () => {
+        if (confirm('Delete this entire section?')) {
+          config.sections.splice(sIndex, 1);
+          renderSections();
+        }
+      });
+      sectionsRoot.querySelector(`[data-add-field="${sIndex}"]`)?.addEventListener('click', () => {
+        config.sections[sIndex].fields.push({
+          id: `question_${Date.now()}`,
+          type: 'text',
+          label: 'New question',
+        });
+        renderSections();
+      });
+
+      bindFieldEditors(sIndex);
+    });
+  }
+
+  function fieldEditorHtml(section: FormSection, sIndex: number, field: FormField, fIndex: number): string {
+    const options = (field.options || []).map((o) => `${o.value}|${o.label}`).join('\n');
+    return `
+      <div class="admin-field-card" data-field="${sIndex}-${fIndex}">
+        <div class="admin-field-card-head">
+          <strong>${field.label || 'Untitled'}</strong>
+          <button type="button" class="admin-btn-small admin-btn-danger" data-delete-field="${sIndex}-${fIndex}">Delete</button>
+        </div>
+        <div class="admin-grid">
+          <label class="admin-field"><span>Label</span><input type="text" data-f-label value="${escapeAttr(field.label)}" /></label>
+          <label class="admin-field"><span>Field ID</span><input type="text" data-f-id value="${escapeAttr(field.id)}" /></label>
+          <label class="admin-field"><span>Type</span>
+            <select data-f-type>${FIELD_TYPES.map((t) => `<option value="${t}" ${field.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+          </label>
+          <label class="admin-field"><span>Question #</span><input type="number" data-f-number value="${field.number ?? ''}" /></label>
+        </div>
+        <label class="admin-checkbox"><input type="checkbox" data-f-required ${field.required ? 'checked' : ''} /> Required</label>
+        <label class="admin-field"><span>Placeholder</span><input type="text" data-f-placeholder value="${escapeAttr(field.placeholder || '')}" /></label>
+        ${['radio', 'checkbox-group', 'select'].includes(field.type) ? `<label class="admin-field"><span>Options (value|label per line)</span><textarea data-f-options rows="4">${options}</textarea></label>` : ''}
+        ${field.id === 'supplierType' ? '<p class="admin-help">Options are loaded automatically from Review Schedules. Suppliers may select multiple types.</p>' : ''}
+      </div>
+    `;
+  }
+
+  function bindFieldEditors(sIndex: number) {
+    const section = config.sections[sIndex];
+    section.fields.forEach((field, fIndex) => {
+      const card = sectionsRoot.querySelector(`[data-field="${sIndex}-${fIndex}"]`);
+      if (!card) return;
+
+      card.querySelector('[data-delete-field]')?.addEventListener('click', () => {
+        if (confirm('Delete this question?')) {
+          section.fields.splice(fIndex, 1);
+          renderSections();
+        }
+      });
+
+      card.querySelector('[data-f-label]')?.addEventListener('input', (e) => {
+        field.label = (e.target as HTMLInputElement).value;
+        (card.querySelector('strong') as HTMLElement).textContent = field.label || 'Untitled';
+      });
+      card.querySelector('[data-f-id]')?.addEventListener('input', (e) => {
+        field.id = (e.target as HTMLInputElement).value;
+      });
+      card.querySelector('[data-f-type]')?.addEventListener('change', (e) => {
+        field.type = (e.target as HTMLSelectElement).value;
+        renderSections();
+      });
+      card.querySelector('[data-f-number]')?.addEventListener('input', (e) => {
+        const val = (e.target as HTMLInputElement).value;
+        field.number = val ? Number(val) : undefined;
+      });
+      card.querySelector('[data-f-required]')?.addEventListener('change', (e) => {
+        field.required = (e.target as HTMLInputElement).checked;
+      });
+      card.querySelector('[data-f-placeholder]')?.addEventListener('input', (e) => {
+        field.placeholder = (e.target as HTMLInputElement).value;
+      });
+      card.querySelector('[data-f-options]')?.addEventListener('input', (e) => {
+        const lines = (e.target as HTMLTextAreaElement).value.split('\n').map((l) => l.trim()).filter(Boolean);
+        field.options = lines.map((line) => {
+          const [value, ...rest] = line.split('|');
+          return { value: value.trim(), label: (rest.join('|') || value).trim() };
+        });
+      });
+    });
+  }
+
+  async function loadSubmissions() {
+    const response = await fetch('/api/admin/submissions');
+    const items = await response.json();
+
+    if (!items.length) {
+      submissionsRoot.innerHTML = '<p class="admin-help">No submissions yet.</p>';
+      return;
+    }
+
+    submissionsRoot.innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>Date</th><th>Company</th><th>Contact</th><th>Score</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${items.map((item: Record<string, unknown>) => `
+            <tr>
+              <td>${item.submittedAt ? new Date(String(item.submittedAt)).toLocaleString('en-GB') : '—'}</td>
+              <td>${item.companyName}</td>
+              <td>${item.contactName}<br><small>${item.email}</small></td>
+              <td>${item.percentage != null ? `${item.percentage}%` : '—'}</td>
+              <td>${item.approvalStatus || item.rating || '—'}</td>
+              <td><button type="button" class="admin-btn-small" data-view-submission="${item.id}">View</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    submissionsRoot.querySelectorAll('[data-view-submission]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.viewSubmission!;
+        const response = await fetch(`/api/admin/submissions/${id}`);
+        const detail = await response.json();
+        renderSubmissionDetail(detail);
+      });
+    });
+  }
+
+  function renderSubmissionDetail(detail: Record<string, unknown>) {
+    const metadata = detail.metadata as Record<string, unknown>;
+    const answers = (metadata.answers || metadata) as Record<string, unknown>;
+    const assessment = metadata.assessment as Record<string, unknown> | undefined;
+    const attachments = (detail.attachments || []) as Array<{ originalName: string; savedName: string; size: number }>;
+    const baseUrl = `/api/admin/submissions/${detail.id}`;
+
+    submissionDetail.hidden = false;
+    submissionDetail.innerHTML = `
+      <div class="admin-card">
+        <div class="admin-panel-head">
+          <h3>Submission ${detail.id}</h3>
+          <button type="button" id="close-detail" class="admin-btn-small">Close</button>
+        </div>
+        ${assessment ? `<p><strong>Score:</strong> ${assessment.totalWeightedScore}/${assessment.maxScore} (${assessment.percentage}%) — ${assessment.approvalStatus}</p>` : ''}
+        ${assessment?.supplierTypeLabel ? `<p><strong>Supplier type(s):</strong> ${assessment.supplierTypeLabel}${assessment.reviewDriverLabel ? ` · <strong>Review driven by:</strong> ${assessment.reviewDriverLabel}` : ''} · <strong>Review:</strong> ${assessment.reviewInterval || '—'} · <strong>Next review:</strong> ${assessment.nextReviewDate || '—'}</p>` : ''}
+
+        <div class="submission-downloads">
+          <h4>Downloads</h4>
+          <div class="download-actions">
+            <a class="admin-btn admin-btn-secondary" href="${baseUrl}/report.pdf" download>Assessment Report (PDF)</a>
+            <a class="admin-btn admin-btn-secondary" href="${baseUrl}/questionnaire.pdf" download>Questionnaire Answers (PDF)</a>
+            ${attachments.length ? `<a class="admin-btn admin-btn-secondary" href="${baseUrl}/attachments.zip" download>All Attachments (ZIP)</a>` : ''}
+          </div>
+          ${attachments.length ? `
+            <ul class="attachment-list">
+              ${attachments.map((file) => `
+                <li>
+                  <a class="admin-link-dark" href="${baseUrl}/attachments/${encodeURIComponent(file.savedName)}" download>${file.originalName}</a>
+                  <span class="attachment-size">${Math.round(file.size / 1024)} KB</span>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="submission-muted">No attachments uploaded.</p>'}
+        </div>
+
+        <pre class="submission-json">${JSON.stringify(answers, null, 2)}</pre>
+      </div>
+    `;
+
+    document.getElementById('close-detail')?.addEventListener('click', () => {
+      submissionDetail.hidden = true;
+    });
+  }
+
+  document.querySelectorAll('.admin-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab').forEach((t) => t.classList.remove('active'));
+      document.querySelectorAll('.admin-panel').forEach((p) => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`panel-${(tab as HTMLElement).dataset.tab}`)?.classList.add('active');
+      if ((tab as HTMLElement).dataset.tab === 'submissions') loadSubmissions();
+    });
+  });
+
+  document.getElementById('add-section-btn')?.addEventListener('click', () => {
+    const title = prompt('Section title?');
+    if (!title) return;
+    config.sections.push({ id: slugify(title), title, fields: [] });
+    renderSections();
+  });
+
+  document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
+    config.settings.notifyEmail = (document.getElementById('setting-notify-email') as HTMLInputElement).value.trim();
+    config.settings.assessorName = (document.getElementById('setting-assessor-name') as HTMLInputElement).value.trim();
+    config.settings.formTitle = (document.getElementById('setting-form-title') as HTMLInputElement).value.trim();
+    config.settings.formSubtitle = (document.getElementById('setting-form-subtitle') as HTMLInputElement).value.trim();
+    try {
+      await saveConfig();
+      showStatus('Settings saved');
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Save failed', 'error');
+    }
+  });
+
+  document.getElementById('change-password-btn')?.addEventListener('click', async () => {
+    const currentPassword = (document.getElementById('password-current') as HTMLInputElement).value;
+    const newPassword = (document.getElementById('password-new') as HTMLInputElement).value;
+    const confirmPassword = (document.getElementById('password-confirm') as HTMLInputElement).value;
+
+    try {
+      const response = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to change password');
+
+      (document.getElementById('password-current') as HTMLInputElement).value = '';
+      (document.getElementById('password-new') as HTMLInputElement).value = '';
+      (document.getElementById('password-confirm') as HTMLInputElement).value = '';
+      showStatus('Password updated successfully');
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Failed to change password', 'error');
+    }
+  });
+
+  document.getElementById('save-all-btn')?.addEventListener('click', async () => {
+    try {
+      await saveConfig();
+      showStatus('All changes saved');
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Save failed', 'error');
+    }
+  });
+
+  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+  });
+
+  loadConfig();
+</script>

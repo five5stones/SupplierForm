@@ -1,0 +1,82 @@
+---
+import CompanyDetails from './form/CompanyDetails.astro';
+import Section1CompanyInfo from './form/Section1CompanyInfo.astro';
+import Section2FoodSafety from './form/Section2FoodSafety.astro';
+import Section3Hygiene from './form/Section3Hygiene.astro';
+import Section4Traceability from './form/Section4Traceability.astro';
+import Section5Allergen from './form/Section5Allergen.astro';
+import Section6Quality from './form/Section6Quality.astro';
+import Section7Delivery from './form/Section7Delivery.astro';
+import Section8Sustainability from './form/Section8Sustainability.astro';
+import Section9Documentation from './form/Section9Documentation.astro';
+import SupplierDeclaration from './form/SupplierDeclaration.astro';
+---
+
+<form id="supplier-form" class="form" enctype="multipart/form-data">
+  <CompanyDetails />
+  <Section1CompanyInfo />
+  <Section2FoodSafety />
+  <Section3Hygiene />
+  <Section4Traceability />
+  <Section5Allergen />
+  <Section6Quality />
+  <Section7Delivery />
+  <Section8Sustainability />
+  <Section9Documentation />
+  <SupplierDeclaration />
+
+  <input type="text" name="_honeypot" class="honeypot" tabindex="-1" autocomplete="off" />
+
+  <div id="form-status" class="status" hidden></div>
+
+  <button type="submit" class="submit" id="submit-btn">Submit Questionnaire</button>
+</form>
+
+<script>
+  const form = document.getElementById('supplier-form') as HTMLFormElement;
+  const status = document.getElementById('form-status') as HTMLDivElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+  const dateCompleted = form.querySelector('[name="dateCompleted"]') as HTMLInputElement;
+  const declarationDate = form.querySelector('[name="declarationDate"]') as HTMLInputElement;
+  const today = new Date().toISOString().split('T')[0];
+
+  if (dateCompleted && !dateCompleted.value) dateCompleted.value = today;
+  if (declarationDate && !declarationDate.value) declarationDate.value = today;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.hidden = true;
+    status.className = 'status';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch('/api/submit', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Submission failed.');
+      }
+
+      status.textContent = `Thank you! Your questionnaire was received. Reference: ${result.submissionId}`;
+      status.className = 'status success';
+      status.hidden = false;
+      form.reset();
+      if (dateCompleted) dateCompleted.value = today;
+      if (declarationDate) declarationDate.value = today;
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'Something went wrong.';
+      status.className = 'status error';
+      status.hidden = false;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Questionnaire';
+    }
+  });
+</script>

@@ -1,0 +1,60 @@
+---
+import FormRadio from './FormRadio.astro';
+---
+
+<section class="section">
+  <h2>Section 2 – Food Safety Management</h2>
+
+  <FormRadio name="documentedFsms" number={5} label="Do you operate a documented Food Safety Management System?" />
+
+  <fieldset class="fieldset">
+    <legend>If yes, please specify:</legend>
+    <div class="checklist">
+      <label class="checkbox"><input type="checkbox" name="fsmsTypes" value="HACCP" /> HACCP</label>
+      <label class="checkbox"><input type="checkbox" name="fsmsTypes" value="ISO 22000" /> ISO 22000</label>
+      <label class="checkbox"><input type="checkbox" name="fsmsTypes" value="SALSA" /> SALSA</label>
+      <label class="checkbox"><input type="checkbox" name="fsmsTypes" value="BRCGS" /> BRCGS</label>
+      <label class="checkbox inline-other">
+        <input type="checkbox" name="fsmsTypes" value="Other" /> Other
+        <input type="text" name="fsmsOther" placeholder="Please specify" />
+      </label>
+    </div>
+  </fieldset>
+
+  <FormRadio name="haccpReviewedRegularly" number={6} label="Is your HACCP plan reviewed regularly?" />
+
+  <label class="field">
+    <span>Review frequency</span>
+    <input type="text" name="haccpReviewFrequency" placeholder="e.g. Annually" />
+  </label>
+
+  <FormRadio
+    name="foodSafetyIncidents"
+    number={7}
+    label="Have you experienced any Food Safety incidents within the last three years?"
+    options={[
+      { value: 'no', label: 'No' },
+      { value: 'yes', label: 'Yes' },
+    ]}
+  />
+
+  <label class="field">
+    <span>If yes, please provide details</span>
+    <textarea name="foodSafetyIncidentDetails" rows="3"></textarea>
+  </label>
+
+  <FormRadio
+    name="foodRecall"
+    number={8}
+    label="Have you ever had a Food Recall?"
+    options={[
+      { value: 'no', label: 'No' },
+      { value: 'yes', label: 'Yes' },
+    ]}
+  />
+
+  <label class="field">
+    <span>If yes, please explain</span>
+    <textarea name="foodRecallDetails" rows="3"></textarea>
+  </label>
+</section>

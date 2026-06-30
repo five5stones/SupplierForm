@@ -1,0 +1,33 @@
+---
+import FormRadio from './FormRadio.astro';
+---
+
+<section class="section">
+  <h2>Section 1 – Company Information</h2>
+
+  <FormRadio name="registeredWithLocalAuthority" number={1} label="Are you registered with your Local Authority?" />
+
+  <label class="field">
+    <span>If yes, Registration Number</span>
+    <input type="text" name="registrationNumber" />
+  </label>
+
+  <label class="field">
+    <span>2. What products do you supply? *</span>
+    <textarea name="productsSupplied" rows="3" required></textarea>
+  </label>
+
+  <label class="field">
+    <span>3. How long has your business been trading? *</span>
+    <input type="text" name="yearsTrading" required placeholder="e.g. 5 years" />
+  </label>
+
+  <FormRadio name="productLiabilityInsurance" number={4} label="Do you hold Product Liability Insurance?" />
+
+  <p class="hint">Please attach certificate where applicable in Section 9.</p>
+
+  <label class="field">
+    <span>Expiry Date</span>
+    <input type="date" name="insuranceExpiryDate" />
+  </label>
+</section>
