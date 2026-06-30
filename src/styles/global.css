@@ -257,6 +257,34 @@ body {
   flex-shrink: 0;
 }
 
+.checkbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkbox-option-hint {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.fsms-cert-notice {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.section-highlight {
+  box-shadow: 0 0 0 2px #f59e0b;
+  border-radius: 12px;
+}
+
 .hint {
   margin: -8px 0 16px;
   font-size: 13px;

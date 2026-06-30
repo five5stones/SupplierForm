@@ -15,6 +15,7 @@ export type FieldType =
 export interface FieldOption {
   value: string;
   label: string;
+  hint?: string;
 }
 
 export interface FormField {

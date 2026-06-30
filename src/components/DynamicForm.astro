@@ -13,7 +13,7 @@ const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
 <form id="supplier-form" class="form" enctype="multipart/form-data">
   {
     appConfig.sections.map((section) => (
-      <section class:list={['section', { 'section-optional': section.optional }]}>
+      <section class:list={['section', { 'section-optional': section.optional }]} id={section.id === 'section-9' ? 'section-documentation' : undefined}>
         <h2>
           {section.title}
           {section.optional && <span class="optional-tag">Optional</span>}
@@ -79,10 +79,18 @@ const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
                     {options.map((opt) => (
                       <label class="checkbox">
                         <input type="checkbox" name={field.id} value={opt.value} />
-                        {opt.label}
+                        <span class="checkbox-text">
+                          <span>{opt.label}</span>
+                          {opt.hint && <span class="checkbox-option-hint">{opt.hint}</span>}
+                        </span>
                       </label>
                     ))}
                   </div>
+                  {field.id === 'fsmsTypes' && (
+                    <div id="fsms-cert-notice" class="fsms-cert-notice" hidden>
+                      <strong>Certificate required:</strong> Please tick &ldquo;SALSA/BRCGS/ISO Certificate&rdquo; below and upload a copy in Section 9.
+                    </div>
+                  )}
                 </fieldset>
               );
             }
@@ -109,7 +117,13 @@ const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
               return (
                 <label class="field">
                   <span>{field.label}</span>
-                  <input type="file" name={field.id} multiple accept={field.accept} />
+                  <input
+                    type="file"
+                    name={field.id}
+                    id={field.id === 'attachments' ? 'attachments-input' : undefined}
+                    multiple
+                    accept={field.accept}
+                  />
                 </label>
               );
             }
@@ -143,6 +157,53 @@ const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
   const status = document.getElementById('form-status') as HTMLDivElement;
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
   const today = new Date().toISOString().split('T')[0];
+  const CERT_DOCUMENT_TYPE = 'SALSA/BRCGS/ISO Certificate';
+  const FSMS_CERT_TYPES = ['SALSA', 'BRCGS'];
+  const fsmsCertNotice = document.getElementById('fsms-cert-notice') as HTMLDivElement | null;
+  const sectionDocumentation = document.getElementById('section-documentation');
+
+  function needsCertUpload(): boolean {
+    return FSMS_CERT_TYPES.some((type) =>
+      Boolean(form.querySelector(`[name="fsmsTypes"][value="${type}"]:checked`)),
+    );
+  }
+
+  function syncCertRequirement() {
+    const needed = needsCertUpload();
+    fsmsCertNotice && (fsmsCertNotice.hidden = !needed);
+
+    if (needed) {
+      const docCheckbox = form.querySelector(
+        `[name="documentTypes"][value="${CERT_DOCUMENT_TYPE}"]`,
+      ) as HTMLInputElement | null;
+      if (docCheckbox && !docCheckbox.checked) docCheckbox.checked = true;
+      sectionDocumentation?.classList.add('section-highlight');
+    } else {
+      sectionDocumentation?.classList.remove('section-highlight');
+    }
+  }
+
+  for (const input of form.querySelectorAll('[name="fsmsTypes"]')) {
+    input.addEventListener('change', syncCertRequirement);
+  }
+
+  function validateCertUploadClient(): string | null {
+    if (!needsCertUpload()) return null;
+
+    const docCheckbox = form.querySelector(
+      `[name="documentTypes"][value="${CERT_DOCUMENT_TYPE}"]`,
+    ) as HTMLInputElement | null;
+    if (!docCheckbox?.checked) {
+      return 'Please tick SALSA/BRCGS/ISO Certificate in Section 9.';
+    }
+
+    const attachments = document.getElementById('attachments-input') as HTMLInputElement | null;
+    if (!attachments?.files?.length) {
+      return 'Please upload a copy of your SALSA or BRCGS certificate in Section 9.';
+    }
+
+    return null;
+  }
 
   for (const name of ['dateCompleted', 'declarationDate']) {
     const input = form.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
@@ -153,6 +214,16 @@ const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
     event.preventDefault();
     status.hidden = true;
     status.className = 'status';
+
+    const certError = validateCertUploadClient();
+    if (certError) {
+      status.textContent = certError;
+      status.className = 'status error';
+      status.hidden = false;
+      sectionDocumentation?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
 
@@ -168,6 +239,7 @@ const brandTemplate = (text: string) => applyBrandTemplate(text, appConfig);
       status.className = 'status success';
       status.hidden = false;
       form.reset();
+      syncCertRequirement();
       for (const name of ['dateCompleted', 'declarationDate']) {
         const input = form.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
         if (input) input.value = today;

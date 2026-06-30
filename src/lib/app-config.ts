@@ -71,6 +71,41 @@ function ensureSupplierTypeField(sections: FormSection[]): FormSection[] {
   return updated;
 }
 
+function ensureDocumentOptionHints(sections: FormSection[]): FormSection[] {
+  const updated = structuredClone(sections);
+  const docSection = updated.find((section) => section.id === 'section-9');
+  if (!docSection) return updated;
+
+  const documentTypes = docSection.fields.find((field) => field.id === 'documentTypes');
+  if (!documentTypes?.options) return updated;
+
+  const salsaOption = documentTypes.options.find(
+    (option) => option.value === 'SALSA/BRCGS/ISO Certificate',
+  );
+  if (salsaOption) {
+    salsaOption.hint = '*please provide a copy';
+  }
+
+  return updated;
+}
+
+function ensureFsmsTypeHints(sections: FormSection[]): FormSection[] {
+  const updated = structuredClone(sections);
+  const fsmsSection = updated.find((section) => section.id === 'section-2');
+  if (!fsmsSection) return updated;
+
+  const fsmsTypes = fsmsSection.fields.find((field) => field.id === 'fsmsTypes');
+  if (!fsmsTypes?.options) return updated;
+
+  const certHint = '*please upload a copy of your certificate in Section 9';
+  for (const value of ['SALSA', 'BRCGS'] as const) {
+    const option = fsmsTypes.options.find((item) => item.value === value);
+    if (option) option.hint = certHint;
+  }
+
+  return updated;
+}
+
 function mergeWithDefaults(parsed: AppConfig): AppConfig {
   const base = structuredClone(defaultAppConfig);
 
@@ -88,7 +123,11 @@ function mergeWithDefaults(parsed: AppConfig): AppConfig {
       logoUpdatedAt: parsed.settings?.logoUpdatedAt,
       notifyEmail: parsed.settings?.notifyEmail || config.notifyEmail,
     },
-    sections: ensureSupplierTypeField(parsed.sections?.length ? parsed.sections : base.sections),
+    sections: ensureFsmsTypeHints(
+      ensureDocumentOptionHints(
+        ensureSupplierTypeField(parsed.sections?.length ? parsed.sections : base.sections),
+      ),
+    ),
     scoringCategories: parsed.scoringCategories?.length ? parsed.scoringCategories : base.scoringCategories,
     supplierReviewSchedules: mergeReviewSchedules(parsed.supplierReviewSchedules),
   };

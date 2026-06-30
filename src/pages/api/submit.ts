@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { loadAppConfig } from '../../lib/app-config';
 import { sendSubmissionEmail } from '../../lib/email';
 import { generateAssessmentPdf, saveAssessmentPdf, generateQuestionnairePdf, saveQuestionnairePdf } from '../../lib/pdf-report';
-import { parseFormAnswers, validateFormAnswers } from '../../lib/form-utils';
+import { parseFormAnswers, validateFormAnswers, validateCertificationUpload } from '../../lib/form-utils';
 import { scoreSupplier } from '../../lib/scoring';
 import { saveSubmissionFiles, saveSubmissionMetadata } from '../../lib/storage';
 import { config, resolveUploadDir } from '../../lib/config';
@@ -24,7 +24,10 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const answers = parseFormAnswers(formData, appConfig);
-    const errors = validateFormAnswers(answers, appConfig);
+    const errors = [
+      ...validateFormAnswers(answers, appConfig),
+      ...validateCertificationUpload(formData, answers),
+    ];
 
     if (errors.length > 0) {
       return new Response(JSON.stringify({ error: errors.join(' ') }), {

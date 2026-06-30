@@ -74,6 +74,31 @@ export function validateFormAnswers(answers: FormAnswers, appConfig: AppConfig):
   return errors;
 }
 
+const CERT_DOCUMENT_TYPE = 'SALSA/BRCGS/ISO Certificate';
+const FSMS_CERT_TYPES = new Set(['SALSA', 'BRCGS']);
+
+export function validateCertificationUpload(formData: FormData, answers: FormAnswers): string[] {
+  const fsmsTypes = multi(answers, 'fsmsTypes');
+  if (!fsmsTypes.some((type) => FSMS_CERT_TYPES.has(type))) return [];
+
+  const errors: string[] = [];
+  const documentTypes = formData.getAll('documentTypes').map(String);
+
+  if (!documentTypes.includes(CERT_DOCUMENT_TYPE)) {
+    errors.push('Please tick SALSA/BRCGS/ISO Certificate in Section 9.');
+  }
+
+  const hasUpload = formData
+    .getAll('attachments')
+    .some((item) => item instanceof File && item.size > 0);
+
+  if (!hasUpload) {
+    errors.push('Please upload a copy of your SALSA or BRCGS certificate in Section 9.');
+  }
+
+  return errors;
+}
+
 export function formatYesNo(value: string): string {
   if (value === 'yes') return 'Yes';
   if (value === 'no') return 'No';
