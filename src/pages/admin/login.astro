@@ -1,5 +1,6 @@
 ---
 import '../../styles/admin.css';
+import AdminCoffeeNote from '../../components/admin/AdminCoffeeNote.astro';
 import { loadAppConfig, getBrandName, getLogoUrl } from '../../lib/app-config';
 import { hasUploadedLogo } from '../../lib/logo';
 
@@ -35,6 +36,7 @@ const logoUploaded = hasUploadedLogo(appConfig);
         <div id="login-error" class="admin-error" hidden></div>
         <button type="submit" class="admin-btn">Sign in</button>
       </form>
+      <AdminCoffeeNote />
     </div>
   </body>
 </html>

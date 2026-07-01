@@ -1,5 +1,6 @@
 ---
 import '../../styles/admin.css';
+import AdminCoffeeNote from '../../components/admin/AdminCoffeeNote.astro';
 import { loadAppConfig, getBrandName, getLogoUrl } from '../../lib/app-config';
 import { hasUploadedLogo } from '../../lib/logo';
 
@@ -151,6 +152,7 @@ const logoUploaded = hasUploadedLogo(appConfig);
     </main>
 
     <footer class="admin-footer">
+      <AdminCoffeeNote />
       <button type="button" id="save-all-btn" class="admin-btn admin-btn-primary">Save All Changes</button>
     </footer>
   </body>
