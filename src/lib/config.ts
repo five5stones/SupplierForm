@@ -19,7 +19,7 @@ export const config = {
     from: env.SMTP_FROM || process.env.SMTP_FROM || '',
   },
   notifyEmail: env.NOTIFY_EMAIL || process.env.NOTIFY_EMAIL || env.SMTP_USER || process.env.SMTP_USER || '',
-  assessorName: env.ASSESSOR_NAME || process.env.ASSESSOR_NAME || 'David Redrup',
+  assessorName: env.ASSESSOR_NAME || process.env.ASSESSOR_NAME || 'Assessor Name',
   adminPassword: (env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || 'changeme').trim(),
   sessionSecret: env.SESSION_SECRET || process.env.SESSION_SECRET || 'supplier-form-dev-secret',
 };

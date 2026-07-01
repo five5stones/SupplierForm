@@ -122,6 +122,12 @@ function mergeWithDefaults(parsed: AppConfig): AppConfig {
       logoFile: parsed.settings?.logoFile?.trim() || '',
       logoUpdatedAt: parsed.settings?.logoUpdatedAt,
       notifyEmail: parsed.settings?.notifyEmail || config.notifyEmail,
+      smtpHost: parsed.settings?.smtpHost?.trim() ?? base.settings.smtpHost,
+      smtpPort: Number(parsed.settings?.smtpPort) > 0 ? Number(parsed.settings.smtpPort) : base.settings.smtpPort,
+      smtpSecure: parsed.settings?.smtpSecure ?? base.settings.smtpSecure,
+      smtpUser: parsed.settings?.smtpUser?.trim() ?? base.settings.smtpUser,
+      smtpPass: parsed.settings?.smtpPass?.trim() || undefined,
+      smtpFrom: parsed.settings?.smtpFrom?.trim() ?? base.settings.smtpFrom,
     },
     sections: ensureFsmsTypeHints(
       ensureDocumentOptionHints(
@@ -135,7 +141,82 @@ function mergeWithDefaults(parsed: AppConfig): AppConfig {
 
 export async function saveAppConfig(appConfig: AppConfig): Promise<void> {
   await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(configPath(), JSON.stringify(appConfig, null, 2), 'utf-8');
+  const toSave = structuredClone(appConfig);
+  delete toSave.settings.smtpPassConfigured;
+  await fs.writeFile(configPath(), JSON.stringify(toSave, null, 2), 'utf-8');
+}
+
+export interface ResolvedSmtpSettings {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+}
+
+export function getSmtpSettings(appConfig: AppConfig): ResolvedSmtpSettings {
+  const settings = appConfig.settings;
+  const user = settings.smtpUser?.trim() || config.smtp.user;
+  const from =
+    settings.smtpFrom?.trim() ||
+    config.smtp.from ||
+    (user ? `"Supplier Form" <${user}>` : '');
+
+  return {
+    host: settings.smtpHost?.trim() || config.smtp.host,
+    port: settings.smtpPort > 0 ? settings.smtpPort : config.smtp.port,
+    secure: settings.smtpSecure ?? config.smtp.secure,
+    user,
+    pass: settings.smtpPass?.trim() || config.smtp.pass,
+    from,
+  };
+}
+
+export function sanitizeAppConfigForAdmin(appConfig: AppConfig): AppConfig {
+  const effective = getSmtpSettings(appConfig);
+  const copy = structuredClone(appConfig);
+  const savedSmtp = Boolean(
+    appConfig.settings.smtpHost?.trim() ||
+      appConfig.settings.smtpUser?.trim() ||
+      appConfig.settings.smtpPass?.trim() ||
+      appConfig.settings.smtpFrom?.trim(),
+  );
+
+  if (savedSmtp) {
+    copy.settings.smtpHost = appConfig.settings.smtpHost;
+    copy.settings.smtpPort = appConfig.settings.smtpPort || 587;
+    copy.settings.smtpSecure = appConfig.settings.smtpSecure ?? false;
+    copy.settings.smtpUser = appConfig.settings.smtpUser;
+    copy.settings.smtpFrom = appConfig.settings.smtpFrom;
+  } else {
+    copy.settings.smtpHost = effective.host;
+    copy.settings.smtpPort = effective.port;
+    copy.settings.smtpSecure = effective.secure;
+    copy.settings.smtpUser = effective.user;
+    copy.settings.smtpFrom = effective.from;
+  }
+
+  copy.settings.notifyEmail = appConfig.settings.notifyEmail || config.notifyEmail;
+  copy.settings.smtpPassConfigured = Boolean(effective.pass);
+  delete copy.settings.smtpPass;
+
+  return copy;
+}
+
+export async function prepareConfigForSave(incoming: AppConfig): Promise<AppConfig> {
+  const existing = await loadAppConfig();
+  const prepared = structuredClone(incoming);
+  const newPass = prepared.settings.smtpPass?.trim();
+
+  if (newPass) {
+    prepared.settings.smtpPass = newPass;
+  } else {
+    prepared.settings.smtpPass = existing.settings.smtpPass;
+  }
+
+  delete prepared.settings.smtpPassConfigured;
+  return prepared;
 }
 
 export function getBrandName(appConfig: AppConfig): string {

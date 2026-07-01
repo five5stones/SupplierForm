@@ -32,6 +32,11 @@ export const defaultAppConfig: AppConfig = {
     formTitle: 'Supplier Approval Questionnaire',
     formSubtitle: 'Supplier Approval & Food Safety Assessment — please complete all required sections.',
     formEyebrow: 'Your Company',
+    smtpHost: '',
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: '',
+    smtpFrom: '',
   },
   supplierReviewSchedules: defaultSupplierReviewSchedules,
   scoringCategories: [

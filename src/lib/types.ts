@@ -61,6 +61,13 @@ export interface AppSettings {
   formTitle: string;
   formSubtitle: string;
   formEyebrow: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass?: string;
+  smtpFrom: string;
+  smtpPassConfigured?: boolean;
   adminPassword?: string;
 }
 

@@ -1,12 +1,12 @@
 import type { APIRoute } from 'astro';
-import { loadAppConfig, saveAppConfig } from '../../../lib/app-config';
+import { loadAppConfig, saveAppConfig, sanitizeAppConfigForAdmin, prepareConfigForSave } from '../../../lib/app-config';
 import type { AppConfig } from '../../../lib/types';
 
 export const prerender = false;
 
 export const GET: APIRoute = async () => {
-  const config = await loadAppConfig();
-  return new Response(JSON.stringify(config), {
+  const appConfig = await loadAppConfig();
+  return new Response(JSON.stringify(sanitizeAppConfigForAdmin(appConfig)), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
@@ -26,7 +26,7 @@ export const PUT: APIRoute = async ({ request }) => {
       body.supplierReviewSchedules = [];
     }
 
-    await saveAppConfig(body);
+    await saveAppConfig(await prepareConfigForSave(body));
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

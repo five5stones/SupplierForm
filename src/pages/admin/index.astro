@@ -105,10 +105,6 @@ const logoUploaded = hasUploadedLogo(appConfig);
             <input type="text" id="setting-form-eyebrow" placeholder="Short name shown above form title" />
           </label>
           <label class="admin-field">
-            <span>Notification email</span>
-            <input type="email" id="setting-notify-email" placeholder="you@gmail.com" />
-          </label>
-          <label class="admin-field">
             <span>Assessor name</span>
             <input type="text" id="setting-assessor-name" />
           </label>
@@ -122,6 +118,43 @@ const logoUploaded = hasUploadedLogo(appConfig);
           </label>
         </div>
         <button type="button" id="save-settings-btn" class="admin-btn">Save Settings</button>
+
+        <div class="admin-divider"></div>
+
+        <h3 class="admin-subheading">Email (SMTP)</h3>
+        <p class="admin-help">Configure outgoing mail for submission notifications. For Gmail, use an <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener noreferrer">app password</a> — host <code>smtp.gmail.com</code>, port <code>587</code>, secure off. Leave password blank to keep the saved one.</p>
+        <div class="admin-grid">
+          <label class="admin-field">
+            <span>Notification email (to)</span>
+            <input type="email" id="setting-notify-email" placeholder="you@gmail.com" />
+          </label>
+          <label class="admin-field">
+            <span>SMTP host</span>
+            <input type="text" id="setting-smtp-host" placeholder="smtp.gmail.com" autocomplete="off" />
+          </label>
+          <label class="admin-field">
+            <span>SMTP port</span>
+            <input type="number" id="setting-smtp-port" min="1" max="65535" placeholder="587" />
+          </label>
+          <label class="admin-field admin-checkbox">
+            <input type="checkbox" id="setting-smtp-secure" />
+            <span>Use SSL/TLS (port 465)</span>
+          </label>
+          <label class="admin-field">
+            <span>SMTP username</span>
+            <input type="text" id="setting-smtp-user" placeholder="you@gmail.com" autocomplete="off" />
+          </label>
+          <label class="admin-field">
+            <span>SMTP password</span>
+            <input type="password" id="setting-smtp-pass" autocomplete="new-password" placeholder="App password" />
+            <p id="smtp-pass-hint" class="admin-help-inline" hidden>Password saved — enter a new value only to change it.</p>
+          </label>
+          <label class="admin-field admin-field-wide">
+            <span>From address</span>
+            <input type="text" id="setting-smtp-from" placeholder='"Your Company" &lt;you@gmail.com&gt;' autocomplete="off" />
+          </label>
+        </div>
+        <button type="button" id="save-email-btn" class="admin-btn">Save Email Settings</button>
 
         <div class="admin-divider"></div>
 
@@ -242,15 +275,50 @@ const logoUploaded = hasUploadedLogo(appConfig);
     }
   }
 
+  function applySettingsFromForm() {
+    const newLogoUrl = (document.getElementById('setting-logo-url') as HTMLInputElement).value.trim();
+
+    config.settings.companyName = (document.getElementById('setting-company-name') as HTMLInputElement).value.trim();
+    config.settings.logoUrl = newLogoUrl;
+    config.settings.formEyebrow = (document.getElementById('setting-form-eyebrow') as HTMLInputElement).value.trim();
+    config.settings.assessorName = (document.getElementById('setting-assessor-name') as HTMLInputElement).value.trim();
+    config.settings.formTitle = (document.getElementById('setting-form-title') as HTMLInputElement).value.trim();
+    config.settings.formSubtitle = (document.getElementById('setting-form-subtitle') as HTMLInputElement).value.trim();
+    config.settings.notifyEmail = (document.getElementById('setting-notify-email') as HTMLInputElement).value.trim();
+    config.settings.smtpHost = (document.getElementById('setting-smtp-host') as HTMLInputElement).value.trim();
+    config.settings.smtpPort = Number((document.getElementById('setting-smtp-port') as HTMLInputElement).value) || 587;
+    config.settings.smtpSecure = (document.getElementById('setting-smtp-secure') as HTMLInputElement).checked;
+    config.settings.smtpUser = (document.getElementById('setting-smtp-user') as HTMLInputElement).value.trim();
+    config.settings.smtpFrom = (document.getElementById('setting-smtp-from') as HTMLInputElement).value.trim();
+
+    const smtpPass = (document.getElementById('setting-smtp-pass') as HTMLInputElement).value.trim();
+    if (smtpPass) {
+      config.settings.smtpPass = smtpPass;
+    } else {
+      delete config.settings.smtpPass;
+    }
+  }
+
   function renderSettings() {
     (document.getElementById('setting-company-name') as HTMLInputElement).value = config.settings.companyName || '';
     (document.getElementById('setting-logo-url') as HTMLInputElement).value = config.settings.logoUrl || '';
     updateLogoPreview();
     (document.getElementById('setting-form-eyebrow') as HTMLInputElement).value = config.settings.formEyebrow || '';
-    (document.getElementById('setting-notify-email') as HTMLInputElement).value = config.settings.notifyEmail || '';
     (document.getElementById('setting-assessor-name') as HTMLInputElement).value = config.settings.assessorName || '';
     (document.getElementById('setting-form-title') as HTMLInputElement).value = config.settings.formTitle || '';
     (document.getElementById('setting-form-subtitle') as HTMLInputElement).value = config.settings.formSubtitle || '';
+    (document.getElementById('setting-notify-email') as HTMLInputElement).value = config.settings.notifyEmail || '';
+    (document.getElementById('setting-smtp-host') as HTMLInputElement).value = config.settings.smtpHost || '';
+    (document.getElementById('setting-smtp-port') as HTMLInputElement).value = String(config.settings.smtpPort || 587);
+    (document.getElementById('setting-smtp-secure') as HTMLInputElement).checked = Boolean(config.settings.smtpSecure);
+    (document.getElementById('setting-smtp-user') as HTMLInputElement).value = config.settings.smtpUser || '';
+    (document.getElementById('setting-smtp-from') as HTMLInputElement).value = config.settings.smtpFrom || '';
+    (document.getElementById('setting-smtp-pass') as HTMLInputElement).value = '';
+
+    const passHint = document.getElementById('smtp-pass-hint');
+    if (passHint) {
+      passHint.hidden = !config.settings.smtpPassConfigured;
+    }
   }
 
   function renderReviews() {
@@ -666,18 +734,24 @@ const logoUploaded = hasUploadedLogo(appConfig);
       config.settings.logoUpdatedAt = undefined;
     }
 
-    config.settings.companyName = (document.getElementById('setting-company-name') as HTMLInputElement).value.trim();
-    config.settings.logoUrl = newLogoUrl;
-    config.settings.formEyebrow = (document.getElementById('setting-form-eyebrow') as HTMLInputElement).value.trim();
-    config.settings.notifyEmail = (document.getElementById('setting-notify-email') as HTMLInputElement).value.trim();
-    config.settings.assessorName = (document.getElementById('setting-assessor-name') as HTMLInputElement).value.trim();
-    config.settings.formTitle = (document.getElementById('setting-form-title') as HTMLInputElement).value.trim();
-    config.settings.formSubtitle = (document.getElementById('setting-form-subtitle') as HTMLInputElement).value.trim();
+    applySettingsFromForm();
     try {
       await saveConfig();
+      await loadConfig();
       refreshHeaderLogo();
       updateLogoPreview();
       showStatus('Settings saved');
+    } catch (error) {
+      showStatus(error instanceof Error ? error.message : 'Save failed', 'error');
+    }
+  });
+
+  document.getElementById('save-email-btn')?.addEventListener('click', async () => {
+    applySettingsFromForm();
+    try {
+      await saveConfig();
+      await loadConfig();
+      showStatus('Email settings saved');
     } catch (error) {
       showStatus(error instanceof Error ? error.message : 'Save failed', 'error');
     }
@@ -708,7 +782,10 @@ const logoUploaded = hasUploadedLogo(appConfig);
 
   document.getElementById('save-all-btn')?.addEventListener('click', async () => {
     try {
+      applySettingsFromForm();
       await saveConfig();
+      await loadConfig();
+      refreshHeaderLogo();
       showStatus('All changes saved');
     } catch (error) {
       showStatus(error instanceof Error ? error.message : 'Save failed', 'error');

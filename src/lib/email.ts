@@ -7,13 +7,12 @@ import {
   getContactEmail,
   sectionToRows,
 } from './form-utils';
-import { getAssessorName, getBrandName, getLogoUrl, getNotifyEmail } from './app-config';
+import { getAssessorName, getBrandName, getLogoUrl, getNotifyEmail, getSmtpSettings } from './app-config';
 import {
   buildEmailLogoHtml,
   getEmailLogoCid,
   loadLogoBuffer,
 } from './logo';
-import { config } from './config';
 import {
   buildReviewReminderFilename,
   canGenerateReviewReminder,
@@ -212,15 +211,17 @@ export async function sendSubmissionEmail(
   pdfReportPath?: string,
 ): Promise<void> {
   const notifyEmail = getNotifyEmail(appConfig);
-  if (!config.smtp.user || !config.smtp.pass || !notifyEmail) {
-    throw new Error('Email is not configured. Set SMTP_USER, SMTP_PASS, and notify email.');
+  const smtp = getSmtpSettings(appConfig);
+
+  if (!smtp.user || !smtp.pass || !notifyEmail) {
+    throw new Error('Email is not configured. Set SMTP details and notification email in Admin → Settings.');
   }
 
   const transporter = nodemailer.createTransport({
-    host: config.smtp.host,
-    port: config.smtp.port,
-    secure: config.smtp.secure,
-    auth: { user: config.smtp.user, pass: config.smtp.pass },
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: { user: smtp.user, pass: smtp.pass },
   });
 
   const logoData = await loadLogoBuffer(appConfig);
@@ -246,7 +247,7 @@ export async function sendSubmissionEmail(
   }
 
   const html = buildEmailHtml(submissionId, data, appConfig, files, assessment, logoHtml);
-  const from = config.smtp.from || `"Supplier Form" <${config.smtp.user}>`;
+  const from = smtp.from;
   const ratingShort = assessment.percentage >= 60 ? assessment.approvalStatus.split('—')[0].trim() : assessment.rating;
 
   if (pdfReportPath) {

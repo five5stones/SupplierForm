@@ -165,7 +165,7 @@ Remove spaces from the app password when pasting into `.env`.
 | `SMTP_PASS` | — | Gmail app password |
 | `SMTP_FROM` | — | Sender display name and address |
 | `NOTIFY_EMAIL` | `SMTP_USER` | Recipient for submission emails |
-| `ASSESSOR_NAME` | `David Redrup` | Name shown on assessment reports |
+| `ASSESSOR_NAME` | `Assessor Name` | Name shown on assessment reports |
 | `ADMIN_PASSWORD` | `changeme` | Admin panel login password |
 | `SESSION_SECRET` | — | Cookie signing secret (change in production) |
 | `MAX_FILE_SIZE_MB` | `10` | Max size per uploaded file |
