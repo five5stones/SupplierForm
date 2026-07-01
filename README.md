@@ -4,6 +4,14 @@
 
 Dynamic HACCP supplier approval questionnaire with weighted scoring, PDF reports, Gmail notifications (including calendar reminders), and a password-protected admin panel. **White-label ready** — configure your company name and form branding from the admin Settings tab. Runs on **port 4000** and ships with Docker support.
 
+## Screenshots
+
+### Public supplier form
+![Public supplier approval questionnaire](docs/screenshots/public-form.png)
+
+### Admin panel
+![Admin dashboard — questionnaire editor](docs/screenshots/admin-dashboard.png)
+
 ## Features
 
 ### Public supplier form
