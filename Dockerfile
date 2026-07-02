@@ -2,18 +2,19 @@ FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
-# Low-RAM VPS builds often kill npm mid-install (shows as "Exit handler never called").
 ENV NODE_OPTIONS=--max-old-space-size=768
 ENV npm_config_fetch_retries=5
 ENV npm_config_fetch_retry_mintimeout=20000
 ENV npm_config_maxsockets=1
 
 COPY package*.json ./
-RUN npm install --no-audit --fund=false --progress=false --ignore-scripts \
-  && npm rebuild esbuild --foreground-scripts
-
 COPY . .
-RUN node ./node_modules/astro/astro.js build && npm prune --omit=dev
+
+# Install and build in one step so Docker cache cannot reuse a broken node_modules layer.
+RUN npm install --no-audit --fund=false --progress=false \
+  && test -f node_modules/astro/astro.js \
+  && node ./node_modules/astro/astro.js build \
+  && npm prune --omit=dev
 
 FROM node:20-bookworm-slim AS runner
 
