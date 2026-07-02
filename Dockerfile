@@ -13,7 +13,7 @@ RUN npm install --no-audit --fund=false --progress=false --ignore-scripts \
   && npm rebuild esbuild --foreground-scripts
 
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN npx astro build && npm prune --omit=dev
 
 FROM node:20-bookworm-slim AS runner
 
