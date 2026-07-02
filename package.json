@@ -4,7 +4,7 @@
   "version": "0.2.0",
   "scripts": {
     "dev": "astro dev --port 4000 --host",
-    "build": "npx astro build",
+    "build": "node ./node_modules/astro/astro.js build",
     "preview": "astro preview --port 4000 --host",
     "start": "node ./dist/server/entry.mjs"
   },
