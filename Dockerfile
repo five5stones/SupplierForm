@@ -2,9 +2,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --no-audit --progress=false
 COPY . .
-RUN npm run build
+RUN npm run build && npm prune --omit=dev
 
 FROM node:22-alpine AS runner
 
@@ -15,10 +15,8 @@ ENV PORT=4000
 ENV DATA_DIR=/app/data
 ENV UPLOAD_DIR=/app/data/uploads
 
-RUN apk add --no-cache wget
-
 COPY package*.json ./
-RUN npm ci --omit=dev
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 RUN mkdir -p /app/data/uploads
