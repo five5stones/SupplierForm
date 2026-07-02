@@ -242,6 +242,21 @@ const logoUploaded = hasUploadedLogo(appConfig);
   const submissionsRoot = document.getElementById('submissions-root') as HTMLDivElement;
   const submissionDetail = document.getElementById('submission-detail') as HTMLDivElement;
   const weightTotalEl = document.getElementById('weight-total') as HTMLElement;
+  const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+  async function parseApiResponse(response: Response): Promise<Record<string, unknown>> {
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 120);
+      throw new Error(
+        snippet
+          ? `Server returned non-JSON (${response.status}): ${snippet}`
+          : `Server returned non-JSON (${response.status}). Check proxy/WAF or sign in again.`,
+      );
+    }
+  }
 
   function showStatus(message: string, type: 'success' | 'error' = 'success') {
     statusEl.textContent = message;
@@ -683,16 +698,25 @@ const logoUploaded = hasUploadedLogo(appConfig);
       return;
     }
 
+    if (file.size > LOGO_MAX_BYTES) {
+      showStatus('Logo too large — max 2 MB.', 'error');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('logo', file);
 
     try {
-      const response = await fetch('/api/admin/logo', { method: 'POST', body: formData });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Upload failed');
+      const response = await fetch('/api/admin/logo', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+      });
+      const result = await parseApiResponse(response);
+      if (!response.ok) throw new Error(String(result.error || 'Upload failed'));
 
-      config.settings.logoFile = result.logoFile || 'logo.png';
-      config.settings.logoUpdatedAt = result.logoUpdatedAt || Date.now();
+      config.settings.logoFile = String(result.logoFile || 'logo.png');
+      config.settings.logoUpdatedAt = Number(result.logoUpdatedAt) || Date.now();
       config.settings.logoUrl = '';
       (document.getElementById('setting-logo-url') as HTMLInputElement).value = '';
       input.value = '';
